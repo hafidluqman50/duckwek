@@ -1,18 +1,25 @@
 # DuckWek demo video
 
-- `duckwek-demo.mp4` — 46 seconds, 1920×1080, 30 fps, silent.
-- `duckwek-demo-poster.png` — intro card, usable as the video thumbnail.
+| File | Format | Use |
+|---|---|---|
+| `duckwek-demo-vertical.mp4` | 1080×1920, 36.7 s, 30 fps | Instagram Reels, TikTok, X, LinkedIn |
+| `duckwek-demo.mp4` | 1920×1080, 36.6 s, 30 fps | X, LinkedIn, README |
+| `duckwek-demo-poster.png` | 1080×1920 | Thumbnail |
+
+Both cuts are silent with captions; add a native platform track when posting. The same source race and the same phone flow are used in both.
 
 ## Storyboard
 
 | Time | Scene |
 |---|---|
-| 0:00–0:05 | Intro: logo, "One block. One step.", live room-wide racing on Monad |
-| 0:05–0:10 | How it works: scan, pay 0.10 USDC, race; one signature; gas sponsored |
-| 0:10–0:35 | Live stage: lobby, countdown, race, CHEER, photo finish, winner |
-| 0:35–0:40 | Proof: on-chain seed, one tick per block, replay, verified contracts |
-| 0:40–0:46 | Outro: live URL, repository, Monad testnet |
+| 0:00–0:08 | Phone: splash, Connect to play, Face ID / fingerprint, the one signature sheet, Sign |
+| 0:08–0:13 | Phone: join the room, 0.10 USDC ticket |
+| 0:13–0:18 | Phone: meet the duck, keep it, lobby |
+| 0:18–0:24 | Phone: race, tap CHEER |
+| 0:24–0:34 | Stage: the same race, pack per block, photo finish, winner |
+| 0:34–0:40 | Phone: rank, soulbound title, duck hatched |
+| 0:40–0:46 | Outro: no bet, only a ticket; live URL and repo |
 
-The stage segment was captured from the live app (`/stage/WEK-VVM`) during a real room on Monad testnet. The race proof hashes are in the root `README.md`.
+The phone segment is the real app captured with Playwright at 390×844 and the device/passkey wallet. The stage segment is the same room on `/stage/WEK-6BG`; the phone result is from that race.
 
-The video is silent; add a music track when posting. The source capture used Chrome CDP screencast and ffmpeg. The intro, how, proof and outro cards are rendered from the project design tokens and the real logo.
+The video is silent. The source capture used Chrome CDP screencast for both the phone and the stage, aligned by event timestamps, and ffmpeg for the cuts and captions.

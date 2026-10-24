@@ -13,7 +13,7 @@
 
 **DuckWek is a live race for one room. Scan the QR, pay a 0.10 USDC ticket, meet your duck, and race the room. Every Monad block moves every duck one step; the chain records the seed, the ticks and the result, and anyone can replay the race.**
 
-[Live App](https://duckwek-app.vercel.app) · [Demo Video](./docs/demo/duckwek-demo.mp4) · [API](https://duckwek-api.fly.dev) · [Frontend](./frontend) · [Backend](./backend) · [Smart Contracts](./smart-contract) · [Plans](./docs/plans)
+[Live App](https://duckwek-app.vercel.app) · [Demo Video](./docs/demo/duckwek-demo.mp4) · [Reels Cut](./docs/demo/duckwek-demo-vertical.mp4) · [API](https://duckwek-api.fly.dev) · [Frontend](./frontend) · [Backend](./backend) · [Smart Contracts](./smart-contract) · [Plans](./docs/plans)
 
 <br/>
 

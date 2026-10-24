@@ -1,0 +1,40 @@
+{
+  "name": "duckwek-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@rainbow-me/rainbowkit": "^2.2.11",
+    "@tailwindcss/postcss": "^4.3.0",
+    "@tanstack/react-query": "^5.100.13",
+    "next": "16.2.6",
+    "qrcode": "^1.5.4",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "socket.io-client": "^4.8.1",
+    "sonner": "^2.0.7",
+    "tailwindcss": "^4.3.0",
+    "viem": "^2.50.4",
+    "wagmi": "^2.19.5",
+    "@fontsource/lilita-one": "^5.2.5",
+    "@fontsource/rubik": "^5.2.5",
+    "@fontsource/jetbrains-mono": "^5.2.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "typescript": "^5"
+  },
+  "overrides": {
+    "@coinbase/cdp-sdk": "1.50.0"
+  }
+}

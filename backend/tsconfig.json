@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "dom"],
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "baseUrl": "./",
+    "paths": {
+      "@Controllers/*": ["app/Http/Controllers/*"],
+      "@Repositories/*": ["app/Http/Repositories/*"],
+      "@Services/*": ["app/Http/Services/*"],
+      "@Middlewares/*": ["app/Http/Middlewares/*"],
+      "@Requests/*": ["app/Http/Requests/*"],
+      "@DTOs/*": ["app/DTOs/*"],
+      "@Interfaces/*": ["app/Interfaces/*"],
+      "@Models/*": ["app/Models/*"],
+      "@Exceptions/*": ["app/Exceptions/*"],
+      "@Engine/*": ["app/Engine/*"],
+      "@Chain/*": ["app/Chain/*"],
+      "@Sockets/*": ["app/Sockets/*"],
+      "@routes/*": ["routes/*"],
+      "@config/*": ["config/*"]
+    },
+    "resolveJsonModule": true,
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "exclude": ["node_modules", "dist", "test"]
+}

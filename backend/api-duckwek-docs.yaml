@@ -1,0 +1,105 @@
+openapi: 3.0.3
+info:
+  title: DuckWek API
+  version: 1.0.0
+  description: |
+    Live duck racing on Monad. Every payment is (Mock) USDC. The player signs ONE EIP-2612 permit at connect (login proof and
+    spending cap); after that the relayer charges every order under it and pays the gas, so players never hold MON.
+    No prize pool, no bets.
+servers:
+  - url: http://localhost:8080
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    Envelope:
+      type: object
+      properties:
+        status: { type: boolean }
+        message: { type: string }
+        data: { type: object }
+paths:
+  /api/auth/nonce:
+    post:
+      tags: [Auth]
+      summary: The session permit (EIP-712 typed data) the wallet signs once; cap and expiry are set by the server
+      requestBody: { content: { application/json: { schema: { type: object, properties: { address: { type: string } } } } } }
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Envelope' } } } } }
+  /api/auth/verify:
+    post:
+      tags: [Auth]
+      summary: Verify the signed permit, start the session, return a JWT that lives as long as the session
+      requestBody: { content: { application/json: { schema: { type: object, properties: { address: { type: string }, signature: { type: string } } } } } }
+      responses: { '200': { description: OK } , '401': { description: Bad signature } }
+  /api/me:
+    get:
+      tags: [Profile]
+      security: [{ bearer: [] }]
+      summary: Duck profile, USDC balance, vault earnings, owned parts, titles, activity
+      responses: { '200': { description: OK } }
+  /api/me/duck:
+    put:
+      tags: [Profile]
+      security: [{ bearer: [] }]
+      summary: Save the duck (template, colors, cosmetics, name, equipped part)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 14 }
+                template: { type: string, enum: [balanced, sprint, tank] }
+                bodyColor: { type: string, example: '#FFC93C' }
+                billColor: { type: string, example: '#FF9F1C' }
+                cosmetics: { type: object, properties: { hat: { type: boolean }, shades: { type: boolean }, scarf: { type: boolean } } }
+                equippedPartTypeId: { type: integer, nullable: true }
+      responses: { '200': { description: OK }, '403': { description: Part not owned } }
+  /api/catalog/tracks:
+    get: { tags: [Catalog], summary: Tracks (path, laps, profile), responses: { '200': { description: OK } } }
+  /api/catalog/parts:
+    get: { tags: [Catalog], summary: Parts with stats and per-track fit, responses: { '200': { description: OK } } }
+  /api/orders:
+    post:
+      tags: [Orders]
+      security: [{ bearer: [] }]
+      summary: Pay create_room (1 USDC), join_room (0.10 USDC) or buy_part (1 USDC) under the session; nothing to sign
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                kind: { type: string, enum: [create_room, join_room, buy_part] }
+                trackId: { type: integer, description: on-chain track id (create_room) }
+                roomName: { type: string }
+                maxDucks: { type: integer, enum: [20, 50, 100, 200] }
+                fillBots: { type: boolean }
+                roomCode: { type: string, example: WEK-7Q2 }
+                partTypeId: { type: integer }
+      responses: { '200': { description: 'tx hash, label and amount (or alreadyIn for a room the player is in)' }, '400': { description: Payment failed on-chain }, '401': { description: Session ended or spending limit reached, connect again } }
+  /api/rooms/{code}:
+    get:
+      tags: [Rooms]
+      summary: Room state (players, track, status, last result)
+      parameters: [{ in: path, name: code, required: true, schema: { type: string } }]
+      responses: { '200': { description: OK }, '404': { description: Not found } }
+  /api/rooms/{code}/loadout:
+    put:
+      tags: [Rooms]
+      security: [{ bearer: [] }]
+      summary: Pick which owned part to race with in this room
+      parameters: [{ in: path, name: code, required: true, schema: { type: string } }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { partTypeId: { type: integer, nullable: true } } } } } }
+      responses: { '200': { description: OK } }
+  /api/rooms/{code}/start:
+    post:
+      tags: [Rooms]
+      security: [{ bearer: [] }]
+      summary: Host starts the race (countdown, start on-chain, then one tick transaction per step)
+      parameters: [{ in: path, name: code, required: true, schema: { type: string } }]
+      responses: { '200': { description: OK }, '403': { description: Not host } }
+  /api/withdraw/prepare:
+    post: { tags: [Withdraw], security: [{ bearer: [] }], summary: Typed data to withdraw vault earnings, responses: { '200': { description: OK } } }
+  /api/withdraw/submit:
+    post: { tags: [Withdraw], security: [{ bearer: [] }], summary: Relayer submits the signed withdrawal, responses: { '200': { description: OK } } }

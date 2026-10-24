@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 1.1 |
+| **Version** | 1.2 |
 | **Status** | Draft |
 | **Date Created** | 2026-10-24 |
 | **Last Updated** | 2026-10-24 |
@@ -11,6 +11,7 @@
 |---|---|---|
 | 1.0 | 2026-10-24 | Initial draft: slide order, narrative, build and verification |
 | 1.1 | 2026-10-24 | Problem reframed globally; removed the 100-person framing; added market research and sources |
+| 1.2 | 2026-10-24 | Problem statement tightened to the participation + verification gap; market stats moved to slide 8; slide timing fixed to 180 s |
 
 ---
 
@@ -45,6 +46,10 @@ The deck must fit the room: 16:9, readable from the back, one idea per slide, an
 | Partner / creator | A reason to make tracks or parts | The creator split and the roadmap |
 | Social viewer | A hook they understand without sound | The cover, the demo video, the CTA |
 
+**Product problem statement:** *A room full of people has no shared game that is instant to join and verifiable to win.* The audience watches, the winner is decided behind the curtain, and on-chain alternatives demand a wallet, gas, and signatures before the fun starts.
+
+The room is the product unit and the first market. The market sizes support the opportunity on slide 8; they are not the problem.
+
 The single sentence the deck must leave behind:
 
 > **DuckWek turns one room into a live race where every Monad block moves every duck one step — no bet, just a ticket, and anyone can replay the result.**
@@ -64,7 +69,7 @@ The problem is **global**: live events are a trillion-dollar market and the audi
 
 Rules for the deck:
 
-- Use **at most two numbers on the problem slide**; the rest belongs in the appendix or speaker notes.
+- Keep the market numbers off the problem slide; they belong on slide 8. The wallet-friction stat can be a footnote on the problem slide.
 - Label the attendance and wallet-friction numbers as **industry estimates**, not measured DuckWek numbers.
 - The only DuckWek numbers on stage are the measured ones: 20 ducks in the live proof, 27/27 replay, 48,264 gas per tick, 7 verified contracts, 0.33 MON for the 20-duck race.
 - The global claim is the market; the room is the beachhead.
@@ -79,16 +84,16 @@ The deck spends the first third on the problem and the mechanic, the second thir
 
 | # | Slide | Headline (on screen) | Content | Visual | Time |
 |---|---|---|---|---|---|
-| 1 | Cover | **DuckWek. One block. One step.** | Live room-wide duck racing on Monad. Live URL + QR. | Logo, phone + stage split, app URL | 10 s |
-| 2 | Problem | **Live events are huge. The audience is still a spectator.** | $1.33T live events market; the winner is decided before the animation; on-chain games ask for a wallet, gas and signatures. | Big "$1.33T", a passive crowd, a faded raffle screen | 20 s |
+| 1 | Cover | **DuckWek. One block. One step.** | Live room-wide duck racing on Monad. Live URL + QR. | Logo, phone + stage split, app URL | 5 s |
+| 2 | Problem | **The room is full. Everyone is still watching.** | Raffles decide before the animation; on-chain games ask for a wallet, gas and signatures. The room gets neither a game nor a proof. | Crowd with phones, a faded raffle, a wallet popup | 20 s |
 | 3 | Solution | **Scan. Pay 0.10 USDC. Race.** | Phone is the controller; the stage is the room; one signature; gas sponsored; no bet. | Phone frame + stage still, 3-step strip | 25 s |
 | 4 | Why Monad | **The chain is the clock.** | ~300 ms blocks; one tick per block; a room full of ducks; 48,264 gas per tick; replay. | Three big numbers and a single tick trace | 20 s |
-| 5 | How it works | **Seed on-chain. Race off-chain. Settle on-chain.** | Phone → API → Vault/Race; `start` fixes seed + `startBlock`; ticks; CHEER; standing root. | One flow diagram, no code | 30 s |
-| 6 | Proof | **It already ran.** | A real room: joins, ticks, finalize, hatch; 27/27 replay; 7 verified contracts; 0.33 MON for a 20-duck race; no proxy. | Explorer hashes, replay check, contract count | 30 s |
-| 7 | Business | **We don't take a bet. We take a fee.** | Rent 1 USDC; ticket 0.10; part 1 USDC (85/15); no prize pool; platform assets credit the protocol. | Three flow arrows with splits; one unit-economics line | 30 s |
-| 8 | Market | **Every room is a market.** | $1.33T live events; $8B racing; start with venues, expand to creator tracks and parts; competitors are animated raffles. | Market numbers + raffle vs DuckWek comparison | 20 s |
-| 9 | Roadmap | **Live today. Mainnet next.** | Today: testnet race + demo. Next: mainnet (migration plan), creator tracks/parts, tips, season pass, venue circuit. | 3-step timeline with "live" and "next" | 20 s |
-| 10 | Ask | **Your duck is waiting.** | Play now at duckwek-app.vercel.app; scan the QR; bring DuckWek to your room. | Large QR, URL, "No bet. Only a ticket." | 15 s |
+| 5 | How it works | **Seed on-chain. Race off-chain. Settle on-chain.** | Phone → API → Vault/Race; `start` fixes seed + `startBlock`; ticks; CHEER; standing root. | One flow diagram, no code | 25 s |
+| 6 | Proof | **It already ran.** | A real room: joins, ticks, finalize, hatch; 27/27 replay; 7 verified contracts; 0.33 MON for a 20-duck race; no proxy. | Explorer hashes, replay check, contract count | 25 s |
+| 7 | Business | **We don't take a bet. We take a fee.** | Rent 1 USDC; ticket 0.10; part 1 USDC (85/15); no prize pool; platform assets credit the protocol. | Three flow arrows with splits; one unit-economics line | 25 s |
+| 8 | Market | **Every room is a market.** | $1.33T live events; $8B racing; start with venues, expand to creator tracks and parts; competitors are animated raffles. | Market numbers + raffle vs DuckWek comparison | 15 s |
+| 9 | Roadmap | **Live today. Mainnet next.** | Today: testnet race + demo. Next: mainnet (migration plan), creator tracks/parts, tips, season pass, venue circuit. | 3-step timeline with "live" and "next" | 10 s |
+| 10 | Ask | **Your duck is waiting.** | Play now at duckwek-app.vercel.app; scan the QR; bring DuckWek to your room. | Large QR, URL, "No bet. Only a ticket." | 10 s |
 
 Appendix (not counted): contract addresses, chain, gas table, key roles, security model, migration plan, repo link.
 
@@ -160,8 +165,8 @@ duckwek-pitch-deck.html
 ```text
 COVER                                   PROBLEM
 ┌───────────────────────────────┐       ┌───────────────────────────────┐
-│ DUCKW EK                      │       │ Live events are huge.         │
-│ One block. One step.          │       │ The audience is a spectator.  │
+│ DUCKW EK                      │       │ The room is full.             │
+│ One block. One step.          │       │ Everyone is still watching.   │
 │ [phone]        [stage]        │       │ • raffle decides early        │
 │ live URL + QR                 │       │ • wallet + gas friction       │
 └───────────────────────────────┘       └───────────────────────────────┘
@@ -180,7 +185,7 @@ Rules: one headline, at most three supporting lines, one visual; no slide with a
 
 ```mermaid
 flowchart TD
-  A[Hook: live events + passive audience] --> B[Problem: no shared game]
+  A[Hook: room full of phones] --> B[Problem: no shared game]
   B --> C[Solution: phone + stage]
   C --> D[Why Monad: block = step]
   D --> E[How: seed, tick, cheer, settle]
@@ -196,7 +201,7 @@ flowchart TD
 | # | Check | Pass condition |
 |---|---|---|
 | V-1 | Slide count | 10 main + appendix |
-| V-2 | Timing | Rehearsal under 3:00; each slide within ±20% of its target |
+| V-2 | Timing | Slide targets sum to 180 s; rehearsal under 3:00; each slide within ±20% |
 | V-3 | Readability | Body ≥28 px; headline ≥72 px; readable at 1920×1080 from the back |
 | V-4 | Offline | Opens from `file://` with no network; fonts and images load |
 | V-5 | Navigation | Arrows, Space, Home/End, `?slide=N`, full screen |

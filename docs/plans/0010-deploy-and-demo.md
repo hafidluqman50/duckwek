@@ -52,10 +52,12 @@ The contracts are immutable and there is no proxy (`0002`). A deployment produce
 cd smart-contract
 forge build
 forge test
-PRIVATE_KEY=... OPERATOR=0x... TREASURY=0x... \
+PRIVATE_KEY=... OPERATOR=0x... TREASURY=0x... WELCOME_ENABLED=true \
   forge script script/Deploy.s.sol --rpc-url "$RPC_URL" --broadcast
 ./script/export-abi.sh
 ```
+
+`WELCOME_ENABLED=true` on testnet. Set it to `false` on mainnet; real USDC has no welcome mint.
 
 Capture from the broadcast output:
 

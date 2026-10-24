@@ -13,6 +13,7 @@
 | 2.0 | 2026-10-24 | Owner requirements: X/LinkedIn/Reels; start at sign; full phone flow; stage scene; 9:16 master + 16:9 cut |
 | 2.1 | 2026-10-24 | Slower 0.8 s crossfades; closing hook and play CTA; removed the testnet/chain copy from the video |
 | 2.2 | 2026-10-24 | Baked CC BY music (“Fluffing a Duck”, Kevin MacLeod); repo removed from the outro, website-only CTA |
+| 2.3 | 2026-10-24 | Replaced the external track with the app's own lobby/race loops and SFX; outro credit changed to “Sound: DuckWek in-app SFX” |
 
 ---
 

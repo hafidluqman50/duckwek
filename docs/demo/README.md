@@ -6,9 +6,9 @@
 | `duckwek-demo.mp4` | 1920×1080, 37.3 s, 30 fps, AAC audio | X, LinkedIn, README |
 | `duckwek-demo-poster.png` | 1080×1920 | Thumbnail |
 
-Both cuts carry the same baked music track. X and LinkedIn do not support adding audio in the composer, so the track is part of the file; Reels can still replace it with a native audio if desired.
+Both cuts carry the same baked soundtrack. X and LinkedIn do not support adding audio in the composer, so the audio is part of the file; Reels can still replace it with a native audio if desired.
 
-**Music:** “Fluffing a Duck” by Kevin MacLeod (incompetech.com), licensed under Creative Commons BY. The credit is in the outro and must stay with the video.
+**Sound design:** built from the DuckWek app's own sound engine (`frontend/lib/sound.ts`): the lobby and race loops, plus the coin, sign, quack, countdown beep, go, cheer, splash, crowd, fanfare and sting SFX. No external track and no music licence to carry.
 
 ## Storyboard
 
@@ -24,4 +24,4 @@ Both cuts carry the same baked music track. X and LinkedIn do not support adding
 
 The phone segment is the real app captured with Playwright at 390×844 and the device/passkey wallet. The stage segment is the same room on `/stage/WEK-6BG`; the phone result is from that race.
 
-The source capture used Chrome CDP screencast for both the phone and the stage, aligned by event timestamps, and ffmpeg for the cuts, 0.8-second crossfades, captions and audio mix.
+The source capture used Chrome CDP screencast for both the phone and the stage, aligned by event timestamps, and ffmpeg for the cuts, 0.8-second crossfades, captions and the audio mix. The track is rendered offline from the same oscillators and noise recipes as the app.

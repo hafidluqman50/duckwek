@@ -49,14 +49,15 @@ export class ProfileService {
     public playerRepository: PlayerRepository,
   ) {}
 
-  /** USDC in the wallet, plus the welcome USDC that the first paid order mints, and what the Vault owes this address. */
+  /** USDC in the wallet, plus the welcome USDC that the first paid order mints when the Vault has it enabled, and what the Vault owes this address. */
   private async balances(address: string): Promise<{ usdc: bigint; earnings: bigint }> {
-    const [balance, earnings, player] = await Promise.all([
+    const [balance, earnings, player, welcomeEnabled] = await Promise.all([
       publicClient.readContract({ address: addresses.usdc, abi: usdcAbi, functionName: 'balanceOf', args: [address as Address] }) as Promise<bigint>,
       publicClient.readContract({ address: addresses.vault, abi: vaultAbi, functionName: 'available', args: [address as Address] }) as Promise<bigint>,
       this.playerRepository.byAddress(address),
+      publicClient.readContract({ address: addresses.vault, abi: vaultAbi, functionName: 'welcomeEnabled' }) as Promise<boolean>,
     ])
-    const welcome = player && !player.first_spend_at ? env.welcomeUsdc : 0n
+    const welcome = player && !player.first_spend_at && welcomeEnabled ? env.welcomeUsdc : 0n
     return { usdc: balance + welcome, earnings }
   }
 

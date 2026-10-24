@@ -21,6 +21,8 @@ Live room-wide duck racing on Monad. **One Monad block moves every duck one step
 
 Deployment transaction (MockUSDC): `0x10571231ea52998fc37c8cb3775d7149a99989ce0be35685a04c117dd7996719`. The full broadcast is in `smart-contract/broadcast/Deploy.s.sol/10143/`.
 
+All seven contracts are verified on MonadVision (`https://testnet.monadvision.com/address/<address>`) and on Monadscan.
+
 There is no proxy. The contracts are immutable; a future change is a migration (`docs/plans/0002-mainnet-migration.md`).
 
 ## Keys

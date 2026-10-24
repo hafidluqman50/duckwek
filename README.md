@@ -9,7 +9,7 @@
 [![Express](https://img.shields.io/badge/Express-TypeScript-000?logo=express)](https://expressjs.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Sequelize-4169E1?logo=postgresql&logoColor=white)](https://sequelize.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs)](https://nextjs.org/)
-[![Monad](https://img.shields.io/badge/Monad-Testnet-836EF9)](https://monad.xyz/)
+[![Monad](https://img.shields.io/badge/Monad-Mainnet%20%7C%20Testnet-836EF9)](https://monad.xyz/)
 
 **DuckWek is a live race for one room. Scan the QR, pay a 0.10 USDC ticket, meet your duck, and race the room. Every Monad block moves every duck one step; the chain records the seed, the ticks and the result, and anyone can replay the race.**
 
@@ -53,7 +53,7 @@ flowchart LR
   Stage[Projector /stage] -- Socket.io --> API
   Phone -- Socket.io --> API
   API[Express API<br/>Controllers · Services · Repositories] --> DB[(PostgreSQL<br/>Sequelize)]
-  API -- newHeads + tick tx --> Monad[(Monad testnet)]
+  API -- newHeads + tick tx --> Monad[(Monad mainnet · 143)]
   Monad --- Vault[DuckWekVault]
   Monad --- Race[DuckWekRace]
   Monad --- Assets[DuckNFT · PartNFT · TrackNFT · Badge]
@@ -90,7 +90,7 @@ sequenceDiagram
 | Contracts | Solidity 0.8.26, Foundry, OpenZeppelin 5.1.0 |
 | Backend | Express 4, TypeScript, Sequelize, PostgreSQL, Socket.io, viem |
 | Frontend | Next.js 16, Tailwind 4, RainbowKit/wagmi, socket.io-client |
-| Chain | Monad testnet, chain id `10143` |
+| Chain | Monad mainnet, chain id `143` (staging: Monad testnet, chain id `10143`) |
 | Hosting | Vercel (web), Fly (API, one machine), Supabase (PostgreSQL) |
 
 ## Repository
@@ -112,6 +112,35 @@ duckwek/
 
 ## Contracts
 
+### Mainnet — chain `143` (production)
+
+| Contract | Address |
+|---|---|
+| USDC (canonical) | `0x754704Bc059F8C67012fEd69BC8A327a5aafb603` |
+| TrackNFT | `0x494E60F463CBBa95E651F51c7D83e340fa727539` |
+| PartNFT | `0x8366276CD79FE70Ee5455cA8Df66bEcf330382E8` |
+| DuckNFT | `0xaC1E2F2006EBB61E66B98F561AFb31fC6af8dabd` |
+| Badge | `0x67876c4a9ebA0ba6C1b7bF1aB77aa3783a1cd10E` |
+| DuckWekVault | `0xab02481724D53675762A360f53A1456827Ad37E5` |
+| DuckWekRace | `0xAD890644342Da283ADa8dA8785C08f66FD7d9522` |
+
+Payment token is Circle's canonical USDC on Monad: `symbol()` = `USDC`, 6 decimals, EIP-2612 permit whose `DOMAIN_SEPARATOR` matches name `USDC` and version `2`. The welcome mint is disabled on mainnet; tickets, rent and part licenses are real USDC.
+
+Explorer: `https://monadscan.com/address/<address>`.
+
+| Deploy step | Transaction |
+|---|---|
+| TrackNFT | `0xb377d5046fafd04a8c3a2fbcd48148699faa74058e2c3457fc84f9e958fb1e88` |
+| PartNFT | `0xee33e9fd10e14ba9ee3135131d14b3c1a6ca2953a874034e82510c20dd474c21` |
+| DuckNFT | `0x0b84c1ff987d41acfbd94eeb6872d1238b8475f3fce77a2432ed2d8b618fdd87` |
+| Badge | `0x98c2f4c7767b8fa7d51a9f154e85b195e6cff3646f96f862d45f1840f6bdcdb9` |
+| DuckWekVault | `0xbee0379cea6d57d5a3f856fa507f6e243b979ce8dca48a3ec203d0f745d4ab54` |
+| DuckWekRace | `0x1958f880269f8888e4b2597cf86007056e7a294e925b36ca03339e9577849ee1` |
+
+Seeded at deploy, all owned by the treasury at 1 USDC each: tracks `Kali Code Sprint` (#1) and `Alpine Ring` (#2); parts `Buroq Wings` (#1), `Turbo Tail` (#2), `Iron Bill` (#3). Deploy script: `smart-contract/script/DeployMainnet.s.sol`; broadcast in `smart-contract/broadcast/DeployMainnet.s.sol/143/`.
+
+### Testnet — chain `10143` (staging)
+
 | Contract | Address |
 |---|---|
 | MockUSDC | `0x65c8b85a3447d2a90cda2c7685066a11f3ef625e` |
@@ -122,9 +151,7 @@ duckwek/
 | DuckWekVault | `0x13D4C18005C8128B404e5F2A66bB944b2d121fDA` |
 | DuckWekRace | `0x7522c338d0519aB039bAdcD48Df1d42CC96FdA65` |
 
-Deployment transaction (MockUSDC): `0x10571231ea52998fc37c8cb3775d7149a99989ce0be35685a04c117dd7996719`. The full broadcast is in `smart-contract/broadcast/Deploy.s.sol/10143/`.
-
-All seven contracts are verified on MonadVision (`https://testnet.monadvision.com/address/<address>`) and on Monadscan.
+Deployment transaction (MockUSDC): `0x10571231ea52998fc37c8cb3775d7149a99989ce0be35685a04c117dd7996719`. The full broadcast is in `smart-contract/broadcast/Deploy.s.sol/10143/`. All seven contracts are verified on MonadVision (`https://testnet.monadvision.com/address/<address>`).
 
 There is no proxy. The contracts are immutable; a future change is a migration (`docs/plans/0002-mainnet-migration.md`).
 
@@ -142,11 +169,22 @@ The deployer is the owner, not the relayer. `WELCOME_ENABLED` is a deploy option
 
 ### Contracts
 
+Mainnet RPC: `https://rpc.monad.xyz` (chain id `143`). Testnet RPC: `https://testnet-rpc.monad.xyz` (chain id `10143`).
+
 ```bash
 cd smart-contract
 forge test
+
+# mainnet (real USDC, no welcome mint)
+PRIVATE_KEY=... OPERATOR=0x5C0929120E9ecfFc5E684Da1d0f5101e7d2d4B49 \
+TREASURY=0xD3ABe6Cb5EAe7B9f57C543151F825AD9149Af2D9 \
+USDC=0x754704Bc059F8C67012fEd69BC8A327a5aafb603 \
+  forge script script/DeployMainnet.s.sol --rpc-url https://rpc.monad.xyz --broadcast
+
+# testnet (staging)
 PRIVATE_KEY=... OPERATOR=0x... TREASURY=0x... WELCOME_ENABLED=true \
-  forge script script/Deploy.s.sol --rpc-url "$RPC_URL" --broadcast
+  forge script script/Deploy.s.sol --rpc-url https://testnet-rpc.monad.xyz --broadcast
+
 ./script/export-abi.sh
 ```
 
@@ -156,7 +194,18 @@ PRIVATE_KEY=... OPERATOR=0x... TREASURY=0x... WELCOME_ENABLED=true \
 cd backend
 npm install
 cp .env.example .env
-# fill JWT_SECRET, RPC_URL, OPERATOR_PRIVATE_KEY, the contract addresses, PostgreSQL
+# mainnet values (fill JWT_SECRET, OPERATOR_PRIVATE_KEY, PostgreSQL)
+# CHAIN_ID=143
+# RPC_URL=https://rpc.monad.xyz
+# EXPLORER_URL=https://monadscan.com
+# RACE=0xAD890644342Da283ADa8dA8785C08f66FD7d9522
+# VAULT=0xab02481724D53675762A360f53A1456827Ad37E5
+# DUCK_NFT=0xaC1E2F2006EBB61E66B98F561AFb31fC6af8dabd
+# MOCK_USDC=0x754704Bc059F8C67012fEd69BC8A327a5aafb603
+# BADGE=0x67876c4a9ebA0ba6C1b7bF1aB77aa3783a1cd10E
+# USDC_NAME=USDC
+# USDC_VERSION=2
+# WELCOME_USDC=0
 npm run migrate:latest
 npm run seed:run
 npm run dev
@@ -168,6 +217,12 @@ npm run dev
 cd frontend
 npm install
 cp .env.example .env.local
+# mainnet values
+# NEXT_PUBLIC_CHAIN_ID=143
+# NEXT_PUBLIC_RPC_URL=https://rpc.monad.xyz
+# NEXT_PUBLIC_EXPLORER_URL=https://monadscan.com
+# NEXT_PUBLIC_API_URL=http://localhost:8080
+# NEXT_PUBLIC_APP_URL=http://localhost:3000
 npm run dev
 # phone: http://localhost:3000/play
 # projector: http://localhost:3000/stage/WEK-XXX

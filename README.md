@@ -11,15 +11,15 @@ Live room-wide duck racing on Monad. **One Monad block moves every duck one step
 
 | Contract | Address |
 |---|---|
-| MockUSDC | `0x3fCE163857596ad26abc2dCD8E0144c14fBeE4cD` |
-| TrackNFT | `0x891e4628e981901FaB0134741112953c786F3276` |
-| PartNFT | `0x7e80d73B8341c26055335FaEd8516dA5f51F233C` |
-| DuckNFT | `0x84a9Bf7e63B7e0a8d2C5872a5095F89485005249` |
-| Badge | `0xb6aD315B8cd562e8AA86E9E577CabDdC9dF34A9C` |
-| DuckWekVault | `0xC434C66A104b4351bb74917cC9408249A8cdA05d` |
-| DuckWekRace | `0x88Dc8Df4045F8343A6b48f2cF0ade5AB8a9D6235` |
+| MockUSDC | `0x65c8b85a3447d2a90cda2c7685066a11f3ef625e` |
+| TrackNFT | `0x5bfbbfca7d2acf8d693b70c30f08afd587eb1079` |
+| PartNFT | `0x1752f6d71e5a2a2be44dfd1813786df49e297717` |
+| DuckNFT | `0xA1B8Ae6C836080AD7cB8b7CCA309C212A8A978EA` |
+| Badge | `0x0f479B77B2721d2b0E8fb2c5c45aeB80237Dcc51` |
+| DuckWekVault | `0x13D4C18005C8128B404e5F2A66bB944b2d121fDA` |
+| DuckWekRace | `0x7522c338d0519aB039bAdcD48Df1d42CC96FdA65` |
 
-Deployment transaction (MockUSDC): `0x5e215a7117cbf7ecace329bec80b80b7d0d8cb1e58bb53424983f15f0f055333`. The full broadcast is in `smart-contract/broadcast/Deploy.s.sol/10143/`.
+Deployment transaction (MockUSDC): `0x10571231ea52998fc37c8cb3775d7149a99989ce0be35685a04c117dd7996719`. The full broadcast is in `smart-contract/broadcast/Deploy.s.sol/10143/`.
 
 There is no proxy. The contracts are immutable; a future change is a migration (`docs/plans/0002-mainnet-migration.md`).
 

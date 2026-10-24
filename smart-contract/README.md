@@ -22,6 +22,15 @@ forge script script/Deploy.s.sol --rpc-url "$RPC_URL" --broadcast
 
 Deploy environment: `PRIVATE_KEY`, `OPERATOR`, `TREASURY`, `WELCOME_ENABLED`. See `.env.example`. Set `WELCOME_ENABLED=true` on testnet and `false` on mainnet.
 
+Mainnet uses the real USDC and always disables the welcome mint. The script checks that the token has code, 6 decimals, the symbol `USDC`, and EIP-2612 `DOMAIN_SEPARATOR`/`nonces` before deploying:
+
+```bash
+USDC=<canonical USDC address> PRIVATE_KEY=... OPERATOR=0x... TREASURY=0x... \
+  forge script script/DeployMainnet.s.sol --rpc-url "$RPC_URL" --broadcast
+```
+
+The Vault trusts the address it is constructed with. The canonical address must come from the official Monad docs and be checked on the explorer; the script proves the token shape, not the issuer.
+
 Dependencies are vendored in `lib/`: forge-std v1.9.4 and OpenZeppelin v5.1.0. solc is pinned to `0.8.26`.
 
 If `binaries.soliditylang.org` is blocked, point Foundry at a local solc: `FOUNDRY_SOLC=/path/to/solc-0.8.26 forge test --offline`.

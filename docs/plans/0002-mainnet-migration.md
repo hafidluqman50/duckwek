@@ -86,6 +86,7 @@ If none of these happens, the fixed deployment stays.
 | Check | Requirement |
 |---|---|
 | USDC | Real address confirmed on Monad mainnet |
+| Token shape | `DeployMainnet.s.sol` requires code, 6 decimals, symbol `USDC`, and EIP-2612 `DOMAIN_SEPARATOR`/`nonces` |
 | Permit | EIP-2612 support verified before promising one signature |
 | Welcome mint | Disabled |
 | Faucet | Not deployed |
@@ -117,6 +118,7 @@ Today this plan changes no code. It records the decision and the future path.
 |---|---|---|
 | `docs/plans/0002-mainnet-migration.md` | `[NEW]` | This plan |
 | `smart-contract/script/DeployV2.s.sol` | `[FUTURE]` | Only if a migration is triggered |
+| `smart-contract/script/DeployMainnet.s.sol` | `[NEW]` | Mainnet deploy against real USDC, with token checks |
 | `smart-contract/src/migration/BalanceClaim.sol` | `[FUTURE]` | Merkle claim for v1 balances |
 | `smart-contract/test/Migration.t.sol` | `[FUTURE]` | Snapshot and claim tests |
 | `backend/script/migrate-snapshot.ts` | `[FUTURE]` | Read `available` and build the root |

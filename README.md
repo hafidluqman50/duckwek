@@ -1,11 +1,114 @@
-# DuckWek
+<div align="center">
 
-Live room-wide duck racing on Monad. **One Monad block moves every duck one step.** Players pay a 0.10 USDC ticket, never hold MON, and the race can be replayed from the on-chain seed.
+# <img src="./frontend/public/logo.png" width="420" alt="DuckWek" />
 
-- **App:** https://duckwek-app.vercel.app
-- **API:** https://duckwek-api.fly.dev
-- **Chain:** Monad testnet, chain id `10143`
-- **Repo:** https://github.com/hafidluqman50/duckwek
+### Live room-wide duck racing on Monad · one race step per block
+
+[![Solidity](https://img.shields.io/badge/Solidity-0.8.26-363636?logo=solidity)](https://soliditylang.org/)
+[![Foundry](https://img.shields.io/badge/Foundry-Framework-yellow)](https://book.getfoundry.sh/)
+[![Express](https://img.shields.io/badge/Express-TypeScript-000?logo=express)](https://expressjs.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Sequelize-4169E1?logo=postgresql&logoColor=white)](https://sequelize.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs)](https://nextjs.org/)
+[![Monad](https://img.shields.io/badge/Monad-Testnet-836EF9)](https://monad.xyz/)
+
+**DuckWek is a live race for one room. Scan the QR, pay a 0.10 USDC ticket, meet your duck, and race the room. Every Monad block moves every duck one step; the chain records the seed, the ticks and the result, and anyone can replay the race.**
+
+[Live App](https://duckwek-app.vercel.app) · [API](https://duckwek-api.fly.dev) · [Frontend](./frontend) · [Backend](./backend) · [Smart Contracts](./smart-contract) · [Plans](./docs/plans)
+
+<br/>
+
+<img src="https://img.shields.io/badge/Payments-USDC%20only-FFC93C?style=for-the-badge" alt="USDC only"/>
+<img src="https://img.shields.io/badge/Gas-sponsored-1E1446?style=for-the-badge" alt="Gas sponsored"/>
+<img src="https://img.shields.io/badge/Prize%20pool-none-F25F5C?style=for-the-badge" alt="No prize pool"/>
+<img src="https://img.shields.io/badge/Contracts-verified-836EF9?style=for-the-badge" alt="Verified contracts"/>
+
+</div>
+
+---
+
+## Overview
+
+Built for **Monad Blitz Jogja Vol. 2** (24 Oct 2026, GIK UGM). The room is the product: 100 people, one projector, one QR, one race.
+
+- **One block = one step.** `start` fixes `startBlock` and the seed from `prevrandao`; the relayer sends one tick transaction per block. The step is `block.number - startBlock`.
+- **One signature.** A player signs an EIP-2612 permit at connect. Every later order is charged under it; the relayer pays gas. Players never hold MON.
+- **No betting.** Rent, tickets and part licenses only. Nothing flows from losers to winners; podium titles are soulbound and cannot be bought.
+- **Replayable.** The seed, the ordered participants and the published cheer log reproduce every position. The live run matched 27 of 27 pushed ticks.
+- **Immutable contracts.** No proxy. A future change is a migration, planned in `docs/plans/0002-mainnet-migration.md`.
+
+The product surface:
+
+- **Phone `/play`** — connect, join, duck profile, part shop, live race, CHEER, result, withdraw.
+- **Projector `/stage/[code]`** — QR, grid, canvas race, photo finish, winner.
+- **Host** — create a room (1 USDC track rent), start the race, watch the room fill.
+- **Assets** — one duck per wallet (egg until the first paid race), part licenses, soulbound podium titles.
+
+`200` is the maximum slot count, never a participant count. The venue population is 100; the demo reports the people who actually joined.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  Phone[Phone /play] -- REST + JWT --> API
+  Stage[Projector /stage] -- Socket.io --> API
+  Phone -- Socket.io --> API
+  API[Express API<br/>Controllers · Services · Repositories] --> DB[(PostgreSQL<br/>Sequelize)]
+  API -- newHeads + tick tx --> Monad[(Monad testnet)]
+  Monad --- Vault[DuckWekVault]
+  Monad --- Race[DuckWekRace]
+  Monad --- Assets[DuckNFT · PartNFT · TrackNFT · Badge]
+  Monad --- USDC[MockUSDC]
+```
+
+## Flow
+
+```mermaid
+sequenceDiagram
+  participant P as Phone
+  participant A as API / relayer
+  participant V as Vault
+  participant R as Race
+  P->>A: POST /api/auth/nonce
+  A-->>P: EIP-2612 permit typed data
+  P->>P: sign once
+  P->>A: POST /api/auth/verify -> JWT
+  P->>A: create room / join / buy part
+  A->>V: permitAndSpend / spend
+  V-->>A: ticket, rent, split, license
+  A->>R: start + tick every block
+  R-->>A: Started(seed, startBlock), Tick(n)
+  A-->>P: race:tick (same payload as the stage)
+  A->>R: finalize(standingRoot, podium)
+  R-->>V: joined() check + Badge.award
+  A-->>P: result, settle tx, hatch
+```
+
+## Stack
+
+| Layer | Technology |
+|---|---|
+| Contracts | Solidity 0.8.26, Foundry, OpenZeppelin 5.1.0 |
+| Backend | Express 4, TypeScript, Sequelize, PostgreSQL, Socket.io, viem |
+| Frontend | Next.js 16, Tailwind 4, RainbowKit/wagmi, socket.io-client |
+| Chain | Monad testnet, chain id `10143` |
+| Hosting | Vercel (web), Fly (API, one machine), Supabase (PostgreSQL) |
+
+## Repository
+
+```text
+duckwek/
+├── smart-contract/   Foundry: src/, test/, script/Deploy.s.sol, export-abi.sh
+├── backend/          Express + TypeScript + Sequelize + Socket.io + viem
+│   ├── app/Http/     Controllers · Services · Repositories · Requests · Middlewares
+│   ├── app/Engine/   Race · Cheers · TrackGeometry
+│   ├── app/Chain/    Relayer · JoinBatcher · TypedData · ABIs
+│   └── test/         e2e · engine · load
+├── frontend/         Next.js 16 phone app and projector stage
+├── docs/plans/       approved work plans and the migration playbook
+├── docs/design/      design tokens and UI rules
+├── FINANCE.md        prices and splits, aligned with the contracts
+└── README.md
+```
 
 ## Contracts
 
@@ -35,34 +138,14 @@ There is no proxy. The contracts are immutable; a future change is a migration (
 
 The deployer is the owner, not the relayer. `WELCOME_ENABLED` is a deploy option: `true` on testnet, `false` on mainnet. The owner can turn it off at any time with `setWelcomeEnabled(false)`.
 
-## How it works
-
-- One signature at connect: EIP-2612 permit for the Vault. The relayer submits and pays gas.
-- Host creates a room for 1 USDC; the rent covers the host's entry.
-- Player joins for 0.10 USDC; the ticket is a fee, not a bet.
-- `DuckWekRace.start` fixes `startBlock` and the seed from `prevrandao`; the relayer sends one tick transaction per block.
-- Positions, overtakes and CHEER are computed off-chain from the seed and the published step count. The chain records the seed, the ticks, the standing root and the podium.
-- A part is a 1 USDC license with a 5% ERC-2981 royalty. A badge is soulbound and cannot be bought.
-
-## Layout
-
-```text
-smart-contract/   Foundry: fixed contracts, tests, deploy script
-backend/          Express + TypeScript + Sequelize + Socket.io + viem
-frontend/         Next.js 16 + Tailwind 4 + RainbowKit/wagmi
-docs/plans/       the approved work plans and migration playbook
-docs/design/      design tokens and UI rules
-FINANCE.md        prices and splits, aligned with the contracts
-```
-
-## Run locally
+## Quick Start
 
 ### Contracts
 
 ```bash
 cd smart-contract
 forge test
-PRIVATE_KEY=... OPERATOR=0x... TREASURY=0x... \
+PRIVATE_KEY=... OPERATOR=0x... TREASURY=0x... WELCOME_ENABLED=true \
   forge script script/Deploy.s.sol --rpc-url "$RPC_URL" --broadcast
 ./script/export-abi.sh
 ```

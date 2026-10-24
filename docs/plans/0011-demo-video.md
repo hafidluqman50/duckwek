@@ -2,14 +2,15 @@
 
 | | |
 |---|---|
-| **Version** | 1.0 |
-| **Status** | Draft |
+| **Version** | 2.0 |
+| **Status** | Approved — social cut |
 | **Date Created** | 2026-10-24 |
 | **Last Updated** | 2026-10-24 |
 
 | Version | Date | Change |
 |---|---|---|
 | 1.0 | 2026-10-24 | Initial draft after the owner rejected the stage-only cut |
+| 2.0 | 2026-10-24 | Owner requirements: X/LinkedIn/Reels; start at sign; full phone flow; stage scene; 9:16 master + 16:9 cut |
 
 ---
 
@@ -223,3 +224,68 @@ flowchart TD
 - [Product Demo Video Best Practices: 2026](https://videoeditingcompany.com/product-demo-video-best-practices/)
 - [App Demo Video: The Ultimate Guide](https://demoscope.app/blog/posts/app-demo-video-ultimate-guide.html)
 - [App Demo Video: A Simple Workflow That Actually Ships](https://mockup.60fps.design/blog/app-demo-video)
+
+---
+
+## 10. Revision 2.0 — Social cut
+
+This section supersedes the storyboard, capture and edit in §3.2–§3.6 where they differ.
+
+### 10.1 Formats
+
+| Cut | Size | Use |
+|---|---|---|
+| Vertical master | 1080×1920, 30 fps | Instagram Reels, TikTok, X, LinkedIn |
+| Horizontal cut | 1920×1080, 30 fps | X, LinkedIn, projector, README |
+
+Both are 45–60 seconds and share the same audio and captions.
+
+### 10.2 Storyboard (start at sign)
+
+| Time | Shot | Caption |
+|---|---|---|
+| 0:00–0:03 | Phone splash with the room invite; tap "Connect to play" | "One room. One race. Every block." |
+| 0:03–0:08 | Connect screen; tap Face ID / fingerprint; signature sheet; tap Sign | "Sign once. No gas. No MON." |
+| 0:08–0:13 | Join screen; pay 0.10 USDC; the ticket confirms | "0.10 USDC ticket. Not a bet." |
+| 0:13–0:18 | Meet the duck; keep it; lobby fills | "Your duck is your profile." |
+| 0:18–0:24 | Phone race screen; tap CHEER | "Every tap pushes your duck." |
+| 0:24–0:34 | Stage full-frame: same race, pack per block, top three, photo finish, winner | "One Monad block = one step." |
+| 0:34–0:40 | Phone result: rank, soulbound title, duck hatched | "Titles are soulbound. The duck is yours." |
+| 0:40–0:48 | Proof/outro: seed, start block, 27/27 replay, verified contracts, live URL | "Replayable. Verified. Live now." |
+
+The first frame is the phone, not a logo card. The sign sheet is visible around 0:05; the ticket around 0:10; the stage after the phone race.
+
+### 10.3 Capture (as tested)
+
+- Host room via API on Kali, 20 slots, bots on; two API joins plus the recorded phone join make four humans; bots fill the rest.
+- Phone: Playwright 390×844, device scale 2, `/play?room=CODE`. Use the real Connect screen:
+  - "Connect to play" → "Use Face ID / fingerprint" → virtual WebAuthn authenticator / device wallet fallback → "Sign" → "Join · 0.10 USDC" → "Keep this duck · to the lobby".
+- Stage: Playwright 1920×1080, `/stage/CODE`.
+- Record both with CDP screencast, storing the CDP `metadata.timestamp` for every frame. Start the race via `POST /api/rooms/CODE/start` after the phone reaches "Waiting for the host"; tap CHEER for ~5 s; capture until the result and hatch.
+- The same race is used for both; the stage room code and winner must match the phone result.
+
+### 10.4 Edit
+
+- **Vertical 9:16:** phone recording fills the frame with a small top/bottom safe area; stage 16:9 is scaled to 1080×608 and centered on a dark background; captions at the bottom. The phone PiP is optional; the stage is the hero of that scene.
+- **Horizontal 16:9:** phone recording in a rounded phone frame on the left with a caption panel on the right; stage full-frame; same captions.
+- Speed up the sign/join/duck steps (1.3–1.6×) where no action is happening; keep the race and photo finish at real speed.
+- Captions: English, 36–42 px, white on a black box, sound-off readable.
+- Audio: optional; use an owner-provided or CC0 track. If none, ship silent.
+
+### 10.5 Deliverables
+
+- `docs/demo/duckwek-demo-vertical.mp4` — 1080×1920 master.
+- `docs/demo/duckwek-demo.mp4` — 1920×1080 cut.
+- `docs/demo/duckwek-demo-poster.png` — phone sign/join frame.
+- `docs/demo/README.md` and root README updated.
+
+### 10.6 Verification (additions)
+
+| # | Check | Pass condition |
+|---|---|---|
+| V-13 | Vertical format | 1080×1920, 30 fps, captions inside safe area |
+| V-14 | Horizontal format | 1920×1080, 30 fps |
+| V-15 | Starts at sign | The first 3 s show the phone splash/connect |
+| V-16 | Full flow | Sign, join, duck, race, CHEER, result, hatch |
+| V-17 | Same race | Stage room code and winner match the phone result |
+| V-18 | Social | Plays on Reels, X and LinkedIn without cropping the captions |

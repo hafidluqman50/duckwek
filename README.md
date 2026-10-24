@@ -23,6 +23,16 @@ Deployment transaction (MockUSDC): `0x10571231ea52998fc37c8cb3775d7149a99989ce0b
 
 There is no proxy. The contracts are immutable; a future change is a migration (`docs/plans/0002-mainnet-migration.md`).
 
+## Keys
+
+| Role | Address | Can |
+|---|---|---|
+| Owner | `0x5617007a51331f4e7241DE852cDc4Bbbe723CAE4` | configure, pause, set the welcome mint |
+| Operator / relayer | `0x5C0929120E9ecfFc5E684Da1d0f5101e7d2d4B49` | charge orders, tick, finalize, hatch |
+| Treasury | `0xD3ABe6Cb5EAe7B9f57C543151F825AD9149Af2D9` | receive protocol fees (pull) |
+
+The deployer is the owner, not the relayer. `WELCOME_ENABLED` is a deploy option: `true` on testnet, `false` on mainnet. The owner can turn it off at any time with `setWelcomeEnabled(false)`.
+
 ## How it works
 
 - One signature at connect: EIP-2612 permit for the Vault. The relayer submits and pays gas.

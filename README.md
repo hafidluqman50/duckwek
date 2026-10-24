@@ -99,4 +99,21 @@ npm run dev
 
 ## Proof
 
-The deployment transaction is listed above. Race proof (create, join, start, tick, finalize, hatch, withdraw) is added after the first live race.
+Deployment transaction (MockUSDC): `0x10571231ea52998fc37c8cb3775d7149a99989ce0be35685a04c117dd7996719`.
+
+Live race `WEK-J8G` on Monad testnet (explorer: `https://testnet.monadvision.com/tx/<hash>`):
+
+| Step | Transaction |
+|---|---|
+| Create room | `0x2c1ef557bfc3a072679d16e4d3c8fa884f4ae2a2432dd4dee8311804ec0e4aca` |
+| Join batch (2 tickets) | `0x1f8ac114dc3847c2b4f0ef1eb997db183a9635577d0a649a901c66f8f4247405` |
+| Start (seed `0x772714905d9ed699506b472e2a4d098ebd16a8e645ebc29cd908a22f1eb2694f`, start block `73723712`) | `0x073008b54a406fa3c0335c27f8ee12fb7f504fb9c6fbc853167844fbf07068e5` |
+| Tick step 3 | `0x63150c24447550b98bbd4ab0e8cdc4aa12f650723e8256f2a874f40e048c37d3` |
+| Tick step 4 | `0x6565b376278322aa6c254fb63dd3647e3a46fcaa49a088329965140884afa34b` |
+| Tick step 6 | `0xdad486ad5ca7ed2b871850e061bd47b882f9c4a7b9bdcfb089d2398fa8307279` |
+| Finalize | `0x3dbcba513f310ec85e840d54d803e937d6425e72714510e9592a5bdc5d6e9eba` |
+| Hatch duck #1 | `0xeb9f28155b2995254d4ac5dedb950de12dbbb7f5a03099184be521639f049ab4` |
+
+Standing root: `0x5226f30a9abbe27c71d55f89ade57a51b2f8de53dc958d198110c2be30b38600`. Cheer root: `0x9915489080799234d12c818dbd017442406686b38ae33288e035c18102ae4781`.
+
+The replay matched 27 of 27 pushed ticks. Gasless withdraw is covered by the Foundry tests; a live withdraw needs a wallet with Vault earnings (treasury or creator), whose key is not in this repository.

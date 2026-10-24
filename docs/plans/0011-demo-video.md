@@ -11,6 +11,7 @@
 |---|---|---|
 | 1.0 | 2026-10-24 | Initial draft after the owner rejected the stage-only cut |
 | 2.0 | 2026-10-24 | Owner requirements: X/LinkedIn/Reels; start at sign; full phone flow; stage scene; 9:16 master + 16:9 cut |
+| 2.1 | 2026-10-24 | Slower 0.8 s crossfades; closing hook and play CTA; removed the testnet/chain copy from the video |
 
 ---
 

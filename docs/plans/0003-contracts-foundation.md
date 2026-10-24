@@ -106,7 +106,7 @@ The permit is the only signature the player gives. No `approve` transaction, no 
 | Item | Testnet | Mainnet |
 |---|---|---|
 | Token | `MockUSDC` (6 decimals, EIP-2612) | Real USDC address on Monad mainnet |
-| Welcome mint | Enabled, 5 USDC once per wallet | Disabled; real USDC has no `welcomeMint` |
+| Welcome mint | Deploy option `WELCOME_ENABLED`; testnet sets it true | Disabled; real USDC has no `welcomeMint` |
 | Faucet | Not shipped | Not shipped |
 | Owner | Deployer | Multisig; no proxy and no upgrade timelock |
 | Upgrade | Immutable | No proxy; future changes go through a migration (`0002`) |

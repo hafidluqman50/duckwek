@@ -23,6 +23,7 @@ contract DeployScript is Script {
         address deployer = vm.addr(deployerKey);
         address operator = vm.envAddress("OPERATOR");
         address treasury = vm.envAddress("TREASURY");
+        bool welcomeEnabled = vm.envOr("WELCOME_ENABLED", false);
 
         vm.startBroadcast(deployerKey);
 
@@ -37,7 +38,7 @@ contract DeployScript is Script {
         parts.setMinter(address(vault));
         badge.setMinter(address(race));
         usdc.setVault(address(vault)); // mock token only: the Vault mints the welcome USDC in a wallet's first order
-        vault.setWelcomeEnabled(true);
+        vault.setWelcomeEnabled(welcomeEnabled);
         vault.setOperator(operator, true);
         vault.setOperator(address(race), true); // the race charges rent and tickets through the Vault
         race.setOperator(operator, true);
@@ -63,5 +64,6 @@ contract DeployScript is Script {
         console.log("BADGE=%s", address(badge));
         console.log("VAULT=%s", address(vault));
         console.log("RACE=%s", address(race));
+        console.log("WELCOME_ENABLED=%s", welcomeEnabled);
     }
 }

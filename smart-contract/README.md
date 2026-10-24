@@ -20,7 +20,7 @@ forge script script/Deploy.s.sol --rpc-url "$RPC_URL" --broadcast
 ./script/export-abi.sh
 ```
 
-Deploy environment: `PRIVATE_KEY`, `OPERATOR`, `TREASURY`. See `.env.example`.
+Deploy environment: `PRIVATE_KEY`, `OPERATOR`, `TREASURY`, `WELCOME_ENABLED`. See `.env.example`. Set `WELCOME_ENABLED=true` on testnet and `false` on mainnet.
 
 Dependencies are vendored in `lib/`: forge-std v1.9.4 and OpenZeppelin v5.1.0. solc is pinned to `0.8.26`.
 

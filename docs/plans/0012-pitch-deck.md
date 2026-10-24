@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 1.2 |
+| **Version** | 1.3 |
 | **Status** | Draft |
 | **Date Created** | 2026-10-24 |
 | **Last Updated** | 2026-10-24 |
@@ -12,6 +12,7 @@
 | 1.0 | 2026-10-24 | Initial draft: slide order, narrative, build and verification |
 | 1.1 | 2026-10-24 | Problem reframed globally; removed the 100-person framing; added market research and sources |
 | 1.2 | 2026-10-24 | Problem statement tightened to the participation + verification gap; market stats moved to slide 8; slide timing fixed to 180 s |
+| 1.3 | 2026-10-24 | Removed the “winner decided before the animation” accusation; framed the category as “a draw, not a race”; added the no-competitor-name rule and a legal-review decision |
 
 ---
 
@@ -34,6 +35,7 @@ The deck must fit the room: 16:9, readable from the back, one idea per slide, an
 7. The deck is a self-contained HTML file with keyboard navigation, plus a PDF export; it works offline with local fonts and assets.
 8. Contract addresses, chain, gas and the migration plan are in the appendix, not the main narrative.
 9. The owner approves the slide order and the script; the deck is rehearsed once on the projector.
+10. No competitor is named, no operator is accused, and the deck makes no legal guarantee.
 
 ## 3. Feature Description
 
@@ -46,7 +48,7 @@ The deck must fit the room: 16:9, readable from the back, one idea per slide, an
 | Partner / creator | A reason to make tracks or parts | The creator split and the roadmap |
 | Social viewer | A hook they understand without sound | The cover, the demo video, the CTA |
 
-**Product problem statement:** *A room full of people has no shared game that is instant to join and verifiable to win.* The audience watches, the winner is decided behind the curtain, and on-chain alternatives demand a wallet, gas, and signatures before the fun starts.
+**Product problem statement:** *A room full of people has no shared game that is instant to join and verifiable to win.* The audience watches, the animation is the show, and the result cannot be replayed. On-chain alternatives demand a wallet, gas, and signatures before the fun starts.
 
 The room is the product unit and the first market. The market sizes support the opportunity on slide 8; they are not the problem.
 
@@ -85,13 +87,13 @@ The deck spends the first third on the problem and the mechanic, the second thir
 | # | Slide | Headline (on screen) | Content | Visual | Time |
 |---|---|---|---|---|---|
 | 1 | Cover | **DuckWek. One block. One step.** | Live room-wide duck racing on Monad. Live URL + QR. | Logo, phone + stage split, app URL | 5 s |
-| 2 | Problem | **The room is full. Everyone is still watching.** | Raffles decide before the animation; on-chain games ask for a wallet, gas and signatures. The room gets neither a game nor a proof. | Crowd with phones, a faded raffle, a wallet popup | 20 s |
+| 2 | Problem | **The room is full. Everyone is still watching.** | An animated draw is not a race: the animation is the show, the audience does not change the outcome, and the result cannot be replayed. On-chain games ask for a wallet, gas and signatures. The room gets neither a game nor a proof. | Crowd with phones, a draw vs race split, a wallet popup | 20 s |
 | 3 | Solution | **Scan. Pay 0.10 USDC. Race.** | Phone is the controller; the stage is the room; one signature; gas sponsored; no bet. | Phone frame + stage still, 3-step strip | 25 s |
 | 4 | Why Monad | **The chain is the clock.** | ~300 ms blocks; one tick per block; a room full of ducks; 48,264 gas per tick; replay. | Three big numbers and a single tick trace | 20 s |
 | 5 | How it works | **Seed on-chain. Race off-chain. Settle on-chain.** | Phone → API → Vault/Race; `start` fixes seed + `startBlock`; ticks; CHEER; standing root. | One flow diagram, no code | 25 s |
 | 6 | Proof | **It already ran.** | A real room: joins, ticks, finalize, hatch; 27/27 replay; 7 verified contracts; 0.33 MON for a 20-duck race; no proxy. | Explorer hashes, replay check, contract count | 25 s |
 | 7 | Business | **We don't take a bet. We take a fee.** | Rent 1 USDC; ticket 0.10; part 1 USDC (85/15); no prize pool; platform assets credit the protocol. | Three flow arrows with splits; one unit-economics line | 25 s |
-| 8 | Market | **Every room is a market.** | $1.33T live events; $8B racing; start with venues, expand to creator tracks and parts; competitors are animated raffles. | Market numbers + raffle vs DuckWek comparison | 15 s |
+| 8 | Market | **Every room is a market.** | $1.33T live events; $8B racing; start with venues, expand to creator tracks and parts; the alternative is an animated draw, not a race. | Market numbers + draw vs race comparison | 15 s |
 | 9 | Roadmap | **Live today. Mainnet next.** | Today: testnet race + demo. Next: mainnet (migration plan), creator tracks/parts, tips, season pass, venue circuit. | 3-step timeline with "live" and "next" | 10 s |
 | 10 | Ask | **Your duck is waiting.** | Play now at duckwek-app.vercel.app; scan the QR; bring DuckWek to your room. | Large QR, URL, "No bet. Only a ticket." | 10 s |
 
@@ -103,6 +105,9 @@ Appendix (not counted): contract addresses, chain, gas table, key roles, securit
 - Say "replayable", not "trustless". The operator posts the result; the race can be replayed.
 - Use the room as the product unit and the first market; never use 100 as the problem size or a participant count. `200` is a slot limit and never a participant count.
 - Use the global market numbers with an "industry estimate" label; do not turn them into DuckWek traction.
+- **Do not name a competitor** or claim that a specific operator decides the winner early. Describe the category: an animated draw is not a race.
+- **Do not call a competitor illegal or rigged.** The safe contrast is: no prize pool, no stake, ticket = entry, title = soulbound.
+- Never claim the deck is "legal" or "compliant"; that is a lawyer's call.
 - Label assumptions: the unit-economics table is an assumption, not a measured revenue.
 - Say "mainnet next" only as a roadmap; do not claim a mainnet deployment.
 - No repo URL on the main slides; website only. The repo can live in the appendix for judges.
@@ -167,8 +172,8 @@ COVER                                   PROBLEM
 ┌───────────────────────────────┐       ┌───────────────────────────────┐
 │ DUCKW EK                      │       │ The room is full.             │
 │ One block. One step.          │       │ Everyone is still watching.   │
-│ [phone]        [stage]        │       │ • raffle decides early        │
-│ live URL + QR                 │       │ • wallet + gas friction       │
+│ [phone]        [stage]        │       │ • draw, not a race            │
+│ live URL + QR                 │       │ • result not replayable       │
 └───────────────────────────────┘       └───────────────────────────────┘
 
 PROOF                                   ASK
@@ -207,9 +212,10 @@ flowchart TD
 | V-5 | Navigation | Arrows, Space, Home/End, `?slide=N`, full screen |
 | V-6 | Print/PDF | 10 pages + appendix; no clipped text; 16:9 |
 | V-7 | QR | Scans to the live app |
-| V-8 | Claims | No 200 participants, no "trustless", no prize pool, no live mainnet, no token |
+| V-8 | Claims | No 200 participants, no "trustless", no prize pool, no live mainnet, no token, no competitor name or accusation |
 | V-9 | Numbers | Each number labelled measured or assumption and traceable |
 | V-10 | Owner | Slide order and script approved before the build |
+| V-11 | Legal | No "legal" or "compliant" claim; the legal review is an open decision |
 
 ### UNVERIFIED
 
@@ -229,6 +235,7 @@ flowchart TD
 | O-47 | Demo video audio | build | The current app-SFX mix is “rada nabrak”; mute it in the deck or fix the mix first |
 | O-48 | Team slide | build | Cover credit only, or a dedicated team slide (would make 11) |
 | O-49 | Mainnet wording | build | “Next” roadmap only, or a dated target |
+| O-50 | Legal review | build | Local counsel reviews the ticket/no-prize model before the deck claims anything about legality |
 
 ## Sources
 

@@ -142,6 +142,7 @@ Anything not in S-1–S-11 is not day-H scope.
 | `0008-frontend-phone.md` | `/play`, wallet, contract simulation, race screen | owner approves the phone flow |
 | `0009-frontend-stage.md` | `/stage`, QR, canvas renderer, playback buffer | owner approves the stage flow |
 | `0010-deploy-and-demo.md` | Env, deploy, verify, evidence, fallback, rehearsal | owner approves the runbook |
+| `0011-demo-video.md` | Phone-first demo video, 45–60 s, captions | owner approves the storyboard |
 
 ### 3.9 Three-minute demo script
 
@@ -188,6 +189,7 @@ duckwek/
 │   ├── plans/0008-frontend-phone.md           [NEW] 0008
 │   ├── plans/0009-frontend-stage.md           [NEW] 0009
 │   ├── plans/0010-deploy-and-demo.md          [NEW] 0010
+│   ├── plans/0011-demo-video.md               [NEW] 0011
 │   └── design/
 │       └── DESIGN_SYSTEM.md                   [NEW] tokens and UI rules
 ├── smart-contract/                            [NEW] Foundry project (0002–0005)
@@ -228,6 +230,7 @@ This plan changes no code. It adds repository rules, the folder skeleton and thi
 - `0006-backend-engine.md` and `0007-backend-api.md` — engine, tick loop, relayer, services, endpoints, sockets.
 - `0008-frontend-phone.md` and `0009-frontend-stage.md` — screens, state, contract calls, stage renderer.
 - `0010-deploy-and-demo.md` — scripts, env keys, deploy and verification commands.
+- `0011-demo-video.md` — phone-first demo capture and edit.
 
 ## 6. UI/UX Changes (Lo-Fi)
 

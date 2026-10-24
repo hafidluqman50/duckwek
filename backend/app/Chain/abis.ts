@@ -33,6 +33,7 @@ export const vaultAbi = parseAbi([
   'function spend(Order o) returns (uint256)',
   'function withdrawWithSig(Withdrawal w, bytes sig)',
   'function available(address) view returns (uint256)',
+  'function welcomeEnabled() view returns (bool)',
   'function priceOf(uint8 kind, uint256 ref) view returns (uint256)',
   'event PartPurchased(address indexed buyer, uint256 indexed typeId, uint256 tokenId, uint256 paid)',
   'event Withdrawn(address indexed owner, address indexed to, uint256 amount)',

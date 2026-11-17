@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Part license NFT</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&amp;family=Rubik:wght@500;700;800;900&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+@keyframes pFloat{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-14px) rotate(4deg)}}
+@keyframes pShine{0%{transform:translateX(-520px) rotate(20deg)}60%,100%{transform:translateX(620px) rotate(20deg)}}
+@keyframes pSpin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</helmet>
+<div style="position: relative; width: 800px; height: 800px; overflow: hidden; background: #1E1446; font-family: Rubik, system-ui, sans-serif; color: #1E1446">
+  <div aria-hidden="true" style="position: absolute; left: 400px; top: 300px; width: 900px; height: 900px; margin: -450px 0 0 -450px; background: repeating-conic-gradient(#2A1D5E 0 10deg, #1E1446 10deg 20deg); border-radius: 50%; animation: pSpin 30s linear infinite"></div>
+  <div style="position: absolute; inset: 28px; border: 10px solid {{frame}}; border-radius: 48px; box-shadow: inset 0 0 0 6px #000000, 0 0 0 6px #000000"></div>
+
+  <div style="position: absolute; left: 64px; top: 60px; right: 64px; display: flex; justify-content: space-between; align-items: center">
+    <span style="padding: 8px 18px; background: {{frame}}; border: 5px solid #000000; border-radius: 999px; font-size: 24px; font-weight: 900; letter-spacing: 2px">{{slot}} · {{build}}</span>
+    <span style="padding: 8px 18px; background: #ffffff; border: 5px solid #000000; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 700">LICENSE #[id]</span>
+  </div>
+
+  <div style="position: absolute; left: 150px; top: 150px; width: 500px; height: 300px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 40px">
+    <div style="animation: pFloat 2.4s ease-in-out infinite">
+      <svg viewBox="50 25 70 55" width="420" role="img" aria-label="Layangan Wings part" style="display: block; overflow: visible">
+        <polygon points="58,66 98,34 110,40 90,74" fill="#ffffff" stroke="#000" stroke-width="3" stroke-linejoin="round"></polygon>
+        <polyline points="66,62 100,38" fill="none" stroke="#FF7AB6" stroke-width="2.5" stroke-linecap="round"></polyline>
+        <polyline points="74,66 104,42" fill="none" stroke="#4ED1C5" stroke-width="2.5" stroke-linecap="round"></polyline>
+        <polyline points="90,74 84,80 92,82 86,88" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round"></polyline>
+      </svg>
+    </div>
+    <div aria-hidden="true" style="position: absolute; top: -100px; left: 0; width: 90px; height: 500px; background: #ffffff; opacity: 0.35; animation: pShine 3s ease-in-out infinite"></div>
+  </div>
+
+  <div style="position: absolute; left: 64px; right: 64px; bottom: 64px; display: flex; flex-direction: column; gap: 14px">
+    <div style="font-family: 'Lilita One', sans-serif; font-size: 66px; line-height: 1; color: #ffffff; -webkit-text-stroke: 8px #000; paint-order: stroke fill">Layangan Wings</div>
+    <div style="background: #ffffff; border: 5px solid #000000; border-radius: 26px; padding: 14px 18px; display: flex; flex-direction: column; gap: 10px">
+      <sc-for list="{{stats}}" as="s" hint-placeholder-count="3">
+        <div style="display: flex; align-items: center; gap: 14px; font-size: 22px; font-weight: 900">
+          <span style="width: 110px">{{s.k}}</span>
+          <div style="flex: 1; height: 22px; background: #EEE8FF; border: 4px solid #000000; border-radius: 999px; overflow: hidden"><div style="width: {{s.w}}; height: 100%; background: {{s.c}}"></div></div>
+          <span style="width: 48px; text-align: right; font-family: 'JetBrains Mono', monospace">{{s.v}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":800,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      slot: 'WINGS',
+      build: 'SPEED BUILD',
+      frame: '#7CC6FE',
+      stats: [
+        { k: 'Speed', v: '+2', w: '100%', c: '#FFC93C' },
+        { k: 'Weight', v: '0', w: '50%', c: '#C9B8FF' },
+        { k: 'Boost', v: '−1', w: '25%', c: '#F25F5C' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

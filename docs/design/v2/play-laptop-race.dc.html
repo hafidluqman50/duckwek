@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Play on laptop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&amp;family=Rubik:wght@500;700;800;900&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#FFC93C}a:hover{color:#ffffff}
+@keyframes dwBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; box-sizing: border-box; background: #120B2E; color: #ffffff; font-family: Rubik, system-ui, sans-serif; display: grid; grid-template-columns: 240px minmax(0, 1fr) 380px; grid-template-rows: 72px minmax(0, 1fr)">
+
+  <!-- top bar -->
+  <header style="grid-column: 1 / 4; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; background: #1E1446; border-bottom: 4px solid #000000">
+    <div style="font-family: 'Lilita One', sans-serif; font-size: 30px; color: #FFC93C; -webkit-text-stroke: 4px #000; paint-order: stroke fill">DUCKWEK</div>
+    <div style="display: flex; align-items: center; gap: 10px">
+      <span style="padding: 6px 14px; border: 3px solid #000000; border-radius: 999px; background: #FFC93C; color: #1E1446; font-family: 'JetBrains Mono', monospace; font-weight: 700">[ROOM]</span>
+      <button type="button" aria-label="Mute sound" style="width: 44px; height: 44px; border: 3px solid #000000; border-radius: 50%; background: #2A1D5E; box-shadow: 0 4px 0 #000000; padding: 0; display: flex; align-items: center; justify-content: center"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 9 H7 L12 5 V19 L7 15 H3 Z" fill="#ffffff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"></path><path d="M15.5 8.5 Q18 12 15.5 15.5 M18 6 Q22 12 18 18" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"></path></svg></button>
+      <button type="button" aria-label="Open wallet" style="height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 14px 0 6px; background: #120B2E; color: #FFC93C; border: 3px solid #000000; border-radius: 999px; box-shadow: 0 4px 0 #000000; font-size: 15px; font-weight: 900"><span style="width: 28px; height: 28px; border-radius: 50%; background: #FFC93C; border: 2px solid #000000"></span>[BALANCE] USDC</button>
+    </div>
+  </header>
+
+  <!-- sidebar (was bottom nav) -->
+  <nav aria-label="Main" style="background: #1E1446; border-right: 4px solid #000000; padding: 20px 16px; display: flex; flex-direction: column; gap: 10px">
+    <a href="#" aria-current="page" style="height: 64px; display: flex; flex-direction: column; justify-content: center; padding: 0 16px; background: #FFC93C; color: #1E1446; border: 3px solid #000000; border-radius: 16px; box-shadow: 0 4px 0 #000000; text-decoration: none"><span style="font-size: 17px; font-weight: 900">Home</span><span style="font-size: 12px; font-weight: 800; opacity: 0.8">rooms</span></a>
+    <a href="#" style="height: 64px; display: flex; flex-direction: column; justify-content: center; padding: 0 16px; background: #2A1D5E; color: #ffffff; border: 3px solid #000000; border-radius: 16px; text-decoration: none"><span style="font-size: 17px; font-weight: 900">My Duck</span><span style="font-size: 12px; font-weight: 800; opacity: 0.8">parts &amp; look</span></a>
+    <a href="#" style="height: 64px; display: flex; flex-direction: column; justify-content: center; padding: 0 16px; background: #2A1D5E; color: #ffffff; border: 3px solid #000000; border-radius: 16px; text-decoration: none"><span style="font-size: 17px; font-weight: 900">Garage</span><span style="font-size: 12px; font-weight: 800; opacity: 0.8">shop</span></a>
+    <div style="flex: 1"></div>
+    <div style="font-size: 12px; font-weight: 800; color: #C9B8FF; line-height: 1.4">Nav is locked while a race runs.</div>
+  </nav>
+
+  <!-- main: live race -->
+  <main style="min-width: 0; padding: 24px; display: flex; flex-direction: column; gap: 18px">
+    <div style="display: flex; align-items: flex-end; justify-content: space-between">
+      <div>
+        <div style="font-size: 14px; font-weight: 900; letter-spacing: 3px; color: #C9B8FF">KALI CODE SPRINT · LIVE</div>
+        <div style="font-family: 'Lilita One', sans-serif; font-size: 48px; color: #FFC93C; -webkit-text-stroke: 5px #000; paint-order: stroke fill">LAP 2 / 3</div>
+      </div>
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 15px; color: #C9B8FF">block #[n] · step [s]</div>
+    </div>
+    <div style="position: relative; flex: 1; background: #836EF9; border: 6px solid #000000; border-radius: 34px; box-shadow: 0 12px 0 #000000; overflow: hidden">
+      <!-- oval track -->
+      <div style="position: absolute; left: 60px; top: 50px; right: 60px; bottom: 50px; border: 46px solid #1E1446; border-radius: 220px"></div>
+      <div style="position: absolute; left: 82px; top: 72px; right: 82px; bottom: 72px; border: 3px dashed #C9B8FF; border-radius: 200px"></div>
+      <div aria-hidden="true" style="position: absolute; left: 48%; top: 44px; width: 22px; height: 58px; background: repeating-conic-gradient(#ffffff 0 25%, #000000 0 50%) 0 0 / 11px 11px"></div>
+      <sc-for list="{{pack}}" as="d" hint-placeholder-count="12">
+        <div style="position: absolute; left: {{d.x}}; top: {{d.y}}; animation: dwBob {{d.bob}} ease-in-out infinite">
+          <svg viewBox="0 0 120 100" width="{{d.w}}" aria-hidden="true"><polygon points="10,60 30,40 70,38 100,50 95,75 60,88 25,84" fill="{{d.color}}" stroke="#000" stroke-width="7" stroke-linejoin="round"></polygon><polygon points="70,40 72,18 88,8 102,16 104,36 92,46" fill="{{d.color}}" stroke="#000" stroke-width="7" stroke-linejoin="round"></polygon><polygon points="102,20 119,27 102,34" fill="#FF9F1C" stroke="#000" stroke-width="6"></polygon></svg>
+        </div>
+      </sc-for>
+      <div style="position: absolute; left: 47%; top: 112px; padding: 3px 12px; border: 3px solid #000000; border-radius: 999px; background: #ffffff; color: #1E1446; font-size: 14px; font-weight: 900">You · P4</div>
+      <div style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; color: #1E1446">
+        <div style="font-size: 13px; font-weight: 900; letter-spacing: 2px">SAME TICK AS THE PROJECTOR</div>
+        <div style="font-family: 'Lilita One', sans-serif; font-size: 34px">Track canvas</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- right panel -->
+  <aside aria-label="Your race" style="background: #1E1446; border-left: 4px solid #000000; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+    <div style="background: #ffffff; color: #1E1446; border: 4px solid #000000; border-radius: 22px; box-shadow: 0 6px 0 #000000; padding: 14px; display: flex; align-items: center; gap: 12px">
+      <svg viewBox="0 0 150 105" width="84" aria-hidden="true" style="overflow: visible"><polygon points="40,72 56,54 94,52 122,62 118,86 84,98 50,94" fill="#FFC93C" stroke="#000" stroke-width="5" stroke-linejoin="round"></polygon><polygon points="58,66 98,34 110,40 90,74" fill="#ffffff" stroke="#000" stroke-width="4" stroke-linejoin="round"></polygon><polygon points="88,52 90,30 106,20 120,28 122,48 110,58" fill="#FFC93C" stroke="#000" stroke-width="5" stroke-linejoin="round"></polygon><polygon points="120,32 140,39 120,46" fill="#FF9F1C" stroke="#000" stroke-width="4" stroke-linejoin="round"></polygon><circle cx="109" cy="34" r="4" fill="#000"></circle></svg>
+      <div style="flex: 1">
+        <div style="font-family: 'Lilita One', sans-serif; font-size: 24px">[Duck name]</div>
+        <div style="font-size: 13px; font-weight: 800; color: #5B4AB8">Sprint · Layangan Wings</div>
+      </div>
+      <div style="text-align: right">
+        <div style="font-size: 11px; font-weight: 900; letter-spacing: 1px; color: #5B4AB8">RANK</div>
+        <div style="font-family: 'Lilita One', sans-serif; font-size: 40px; line-height: 1">P4</div>
+      </div>
+    </div>
+    <div style="background: #120B2E; border: 4px solid #000000; border-radius: 22px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+      <div style="font-size: 12px; font-weight: 900; letter-spacing: 2px; color: #C9B8FF">TOP 5</div>
+      <sc-for list="{{top}}" as="r" hint-placeholder-count="5">
+        <div style="display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 900">
+          <span style="width: 28px; font-family: 'Lilita One', sans-serif; font-size: 20px; color: #FFC93C">{{r.rank}}</span>
+          <span style="width: 18px; height: 18px; border-radius: 50%; border: 3px solid #000000; background: {{r.color}}"></span>
+          <span style="flex: 1">{{r.name}}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="flex: 1"></div>
+    <div style="font-size: 13px; font-weight: 800; color: #C9B8FF; text-align: center">TAP TO BOOST · or press Space</div>
+    <button type="button" style="height: 120px; background: #FFC93C; color: #1E1446; border: 5px solid #000000; border-radius: 30px; box-shadow: 0 9px 0 #000000; font-family: 'Lilita One', sans-serif; font-size: 52px">CHEER</button>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const cols = ['#4ED1C5', '#FF7AB6', '#ffffff', '#B8F35A', '#7CC6FE', '#FF9F1C', '#C9B8FF', '#F25F5C', '#2B2B2B', '#9BE7FF', '#836EF9'];
+    const pack = [];
+    for (let k = 0; k < 22; k++) {
+      pack.push({ x: (30 + k * 2.6) + '%', y: (5 + (k % 3) * 2.2) + '%', w: 46, color: cols[k % cols.length], bob: (0.8 + (k % 4) * 0.15).toFixed(2) + 's' });
+    }
+    pack.push({ x: '48%', y: '8%', w: 60, color: '#FFC93C', bob: '0.8s' });
+    return {
+      pack: pack,
+      top: [
+        { rank: 1, name: '[Player]', color: '#4ED1C5' },
+        { rank: 2, name: '#07', color: '#FF7AB6' },
+        { rank: 3, name: '[Player]', color: '#B8F35A' },
+        { rank: 4, name: 'You', color: '#FFC93C' },
+        { rank: 5, name: '#31', color: '#ffffff' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

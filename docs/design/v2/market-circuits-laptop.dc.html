@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Market circuits laptop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&amp;family=Rubik:wght@500;700;800;900&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#FFC93C}a:hover{color:#ffffff}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; box-sizing: border-box; background: #120B2E; color: #ffffff; font-family: Rubik, system-ui, sans-serif; display: grid; grid-template-columns: 240px minmax(0, 1fr) 400px; grid-template-rows: 72px minmax(0, 1fr)">
+
+  <header style="grid-column: 1 / 4; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; background: #1E1446; border-bottom: 4px solid #000000">
+    <div style="font-family: 'Lilita One', sans-serif; font-size: 30px; color: #FFC93C; -webkit-text-stroke: 4px #000; paint-order: stroke fill">DUCKWEK</div>
+    <button type="button" aria-label="Open wallet" style="height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 14px 0 6px; background: #120B2E; color: #FFC93C; border: 3px solid #000000; border-radius: 999px; box-shadow: 0 4px 0 #000000; font-size: 15px; font-weight: 900"><span style="width: 28px; height: 28px; border-radius: 50%; background: #FFC93C; border: 2px solid #000000"></span>[BALANCE] USDC</button>
+  </header>
+
+  <nav aria-label="Main" style="background: #1E1446; border-right: 4px solid #000000; padding: 20px 16px; display: flex; flex-direction: column; gap: 10px">
+    <a href="#" style="height: 64px; display: flex; flex-direction: column; justify-content: center; padding: 0 16px; background: #2A1D5E; color: #ffffff; border: 3px solid #000000; border-radius: 16px; text-decoration: none"><span style="font-size: 17px; font-weight: 900">Home</span><span style="font-size: 12px; font-weight: 800; opacity: 0.8">rooms</span></a>
+    <a href="#" style="height: 64px; display: flex; flex-direction: column; justify-content: center; padding: 0 16px; background: #2A1D5E; color: #ffffff; border: 3px solid #000000; border-radius: 16px; text-decoration: none"><span style="font-size: 17px; font-weight: 900">My Duck</span><span style="font-size: 12px; font-weight: 800; opacity: 0.8">parts &amp; look</span></a>
+    <a href="#" aria-current="page" style="height: 64px; display: flex; flex-direction: column; justify-content: center; padding: 0 16px; background: #FFC93C; color: #1E1446; border: 3px solid #000000; border-radius: 16px; box-shadow: 0 4px 0 #000000; text-decoration: none"><span style="font-size: 17px; font-weight: 900">Market</span><span style="font-size: 12px; font-weight: 800; opacity: 0.8">parts · circuits</span></a>
+  </nav>
+
+  <main style="min-width: 0; padding: 24px; display: flex; flex-direction: column; gap: 18px; overflow: hidden">
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px">
+      <div style="font-family: 'Lilita One', sans-serif; font-size: 48px; line-height: 1; color: #FFC93C; -webkit-text-stroke: 5px #000; paint-order: stroke fill">Market</div>
+      <div role="tablist" aria-label="Market sections" style="display: flex; gap: 6px; padding: 5px; background: #1E1446; border: 3px solid #000000; border-radius: 999px">
+        <a href="MarketParts.dc.html" role="tab" aria-selected="false" style="padding: 9px 20px; border-radius: 999px; color: #ffffff; border: 3px solid transparent; font-weight: 900; text-decoration: none">Parts</a>
+        <a href="#" role="tab" aria-selected="true" style="padding: 9px 20px; border-radius: 999px; background: #FFC93C; color: #1E1446; border: 3px solid #000000; font-weight: 900; text-decoration: none">Circuits</a>
+        <a href="MarketResale.dc.html" role="tab" aria-selected="false" style="padding: 9px 20px; border-radius: 999px; color: #C9B8FF; border: 3px solid transparent; font-weight: 900; text-decoration: none">Resale · Q4</a>
+      </div>
+    </div>
+    <div style="font-size: 15px; font-weight: 800; color: #C9B8FF">Rent a circuit to open a room. The circuit owner gets 50% of the rent and 50% of every ticket.</div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px">
+      <!-- Kali -->
+      <div style="background: #ffffff; color: #1E1446; border: 5px solid #FFC93C; border-radius: 26px; box-shadow: 0 8px 0 #000000; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+        <div style="height: 190px; background: #836EF9; border: 4px solid #000000; border-radius: 18px; overflow: hidden">
+          <svg viewBox="0 0 1920 1080" width="100%" height="100%" aria-hidden="true" preserveAspectRatio="xMidYMid meet"><path d="M60 930 C300 1000 520 640 860 720 C1200 800 1380 1000 1600 760 C1820 520 1700 300 1340 260 C980 220 760 340 640 140" fill="none" stroke="#000000" stroke-width="110" stroke-linecap="round"></path><path d="M60 930 C300 1000 520 640 860 720 C1200 800 1380 1000 1600 760 C1820 520 1700 300 1340 260 C980 220 760 340 640 140" fill="none" stroke="#1E1446" stroke-width="80" stroke-linecap="round"></path><path d="M60 930 C300 1000 520 640 860 720 C1200 800 1380 1000 1600 760 C1820 520 1700 300 1340 260 C980 220 760 340 640 140" fill="none" stroke="#C9B8FF" stroke-width="8" stroke-dasharray="30 30"></path></svg>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between"><div style="font-family: 'Lilita One', sans-serif; font-size: 28px">Kali Code Sprint</div><span style="padding: 3px 10px; border: 3px solid #000000; border-radius: 999px; background: #FFC93C; font-size: 13px; font-weight: 900">1 USDC rent</span></div>
+        <div style="display: flex; gap: 8px; font-size: 13px; font-weight: 900">
+          <span style="padding: 3px 10px; border: 3px solid #000000; border-radius: 999px">1 lap</span><span style="padding: 3px 10px; border: 3px solid #000000; border-radius: 999px">6 turns</span><span style="padding: 3px 10px; border: 3px solid #000000; border-radius: 999px">1.8 km</span><span style="padding: 3px 10px; border: 3px solid #000000; border-radius: 999px">Sprint</span>
+        </div>
+        <div style="font-size: 12px; font-weight: 800; color: #5B4AB8">Owner · DuckWek (platform)</div>
+      </div>
+      <!-- Merapi Ring (original segment layout) -->
+      <div style="background: #ffffff; color: #1E1446; border: 5px solid #000000; border-radius: 26px; box-shadow: 0 8px 0 #000000; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+        <div style="height: 190px; background: #4ED1C5; border: 4px solid #000000; border-radius: 18px; overflow: hidden">
+          <svg viewBox="80 80 800 540" width="100%" height="100%" aria-hidden="true" preserveAspectRatio="xMidYMid meet"><path d="{{merapi}}" fill="none" stroke="#000000" stroke-width="70" stroke-linejoin="round"></path><path d="{{merapi}}" fill="none" stroke="#1E1446" stroke-width="50" stroke-linejoin="round"></path><path d="{{merapi}}" fill="none" stroke="#C9B8FF" stroke-width="5" stroke-dasharray="24 24"></path></svg>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between"><div style="font-family: 'Lilita One', sans-serif; font-size: 28px">Merapi Ring</div><span style="padding: 3px 10px; border: 3px solid #000000; border-radius: 999px; background: #FFC93C; font-size: 13px; font-weight: 900">1 USDC rent</span></div>
+        <div style="display: flex; gap: 8px; font-size: 13px; font-weight: 900">
+          <span style="padding: 3px 10px; border: 3px solid #000000; border-radius: 999px">[n] laps</span><span style="padding: 3px 10px; border: 3px solid #000000; border-radius: 999px">6 turns</span><span style="padding: 3px 10px; border: 3px solid #000000; border-radius: 999px">[length]</span><span style="padding: 3px 10px; border: 3px solid #000000; border-radius: 999px">Circuit</span>
+        </div>
+        <div style="font-size: 12px; font-weight: 800; color: #5B4AB8">Owner · DuckWek (platform)</div>
+      </div>
+    </div>
+    <!-- custom track -->
+    <div style="display: flex; align-items: center; gap: 18px; padding: 16px 20px; background: #1E1446; border: 4px dashed #836EF9; border-radius: 24px">
+      <div style="flex: none; width: 56px; height: 56px; border-radius: 16px; border: 3px solid #000000; background: #836EF9; display: flex; align-items: center; justify-content: center; font-family: 'Lilita One', sans-serif; font-size: 34px; color: #1E1446">+</div>
+      <div style="flex: 1">
+        <div style="font-family: 'Lilita One', sans-serif; font-size: 24px">Custom track · coming soon</div>
+        <div style="font-size: 14px; font-weight: 700; color: #C9B8FF">Design your own track, rent it to hosts, earn 50% of every rental.</div>
+      </div>
+      <span style="padding: 6px 14px; border: 3px solid #000000; border-radius: 999px; background: #2A1D5E; font-size: 13px; font-weight: 900">Q4</span>
+    </div>
+  </main>
+
+  <aside aria-label="Rent this circuit" style="background: #1E1446; border-left: 4px solid #000000; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+    <div style="font-size: 12px; font-weight: 900; letter-spacing: 2px; color: #C9B8FF">RENT &amp; OPEN A ROOM</div>
+    <div style="font-family: 'Lilita One', sans-serif; font-size: 34px; color: #FFC93C">Kali Code Sprint</div>
+    <label for="roomname" style="font-size: 13px; font-weight: 900">Room name</label>
+    <input id="roomname" type="text" placeholder="[Your room name]" style="height: 52px; padding: 0 14px; background: #ffffff; color: #1E1446; border: 4px solid #000000; border-radius: 16px; font-family: Rubik, sans-serif; font-size: 17px; font-weight: 800">
+    <div style="background: #120B2E; border: 3px solid #000000; border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; font-weight: 800">
+      <div style="display: flex; justify-content: space-between"><span style="color: #C9B8FF">Rent</span><span>1.00 USDC</span></div>
+      <div style="display: flex; justify-content: space-between"><span style="color: #C9B8FF">Your own entry</span><span>included</span></div>
+      <div style="display: flex; justify-content: space-between"><span style="color: #C9B8FF">Player ticket</span><span>0.10 USDC</span></div>
+      <div style="display: flex; justify-content: space-between"><span style="color: #C9B8FF">Slots</span><span>up to 200</span></div>
+      <div style="height: 3px; background: #2A1D5E"></div>
+      <div style="display: flex; justify-content: space-between"><span style="color: #C9B8FF">Goes to</span><span>circuit owner 50% · protocol 50%</span></div>
+    </div>
+    <div style="font-size: 12px; font-weight: 700; color: #C9B8FF; line-height: 1.45">Platform circuit: rent and tickets go to the protocol. No prize pool.</div>
+    <div style="flex: 1"></div>
+    <button type="button" style="height: 64px; background: #FFC93C; color: #1E1446; border: 4px solid #000000; border-radius: 20px; box-shadow: 0 7px 0 #000000; font-size: 20px; font-weight: 900">Rent · 1 USDC &amp; open room</button>
+    <div style="font-size: 12px; font-weight: 800; color: #C9B8FF; text-align: center">No gas. Opens the stage link and the QR.</div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      merapi: 'M260 560 L650 560 Q820 560 820 430 L820 380 Q820 300 740 300 L620 300 Q560 300 560 240 L560 190 Q560 120 490 120 L270 120 Q130 120 130 260 L130 420 Q130 560 260 560 Z'
+    };
+  }
+}
+</script>
+</body>
+</html>

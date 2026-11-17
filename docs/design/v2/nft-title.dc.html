@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Soulbound title NFT</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&amp;family=Rubik:wght@500;700;800;900&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+@keyframes bFall{0%{transform:translateY(-80px) rotate(0deg)}100%{transform:translateY(860px) rotate(540deg)}}
+@keyframes bPop{0%,100%{transform:scale(1) rotate(-3deg)}50%{transform:scale(1.06) rotate(2deg)}}
+@keyframes bBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</helmet>
+<div style="position: relative; width: 800px; height: 800px; overflow: hidden; background: #FFC93C; font-family: Rubik, system-ui, sans-serif; color: #1E1446">
+  <sc-for list="{{confetti}}" as="c" hint-placeholder-count="14">
+    <div aria-hidden="true" style="position: absolute; left: {{c.x}}px; top: 0; width: {{c.w}}px; height: 12px; background: {{c.c}}; border: 3px solid #000000; animation: bFall {{c.d}}s linear {{c.dl}}s infinite"></div>
+  </sc-for>
+  <div style="position: absolute; inset: 28px; border: 8px solid #000000; border-radius: 48px; box-shadow: 0 14px 0 #000000"></div>
+
+  <div style="position: absolute; left: 64px; top: 60px; right: 64px; display: flex; justify-content: space-between; align-items: center">
+    <span style="padding: 8px 18px; background: #1E1446; color: #ffffff; border: 5px solid #000000; border-radius: 999px; font-size: 22px; font-weight: 900; letter-spacing: 3px">SOULBOUND</span>
+    <span style="padding: 8px 18px; background: #ffffff; border: 5px solid #000000; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700">RACE #[n]</span>
+  </div>
+
+  <!-- podium -->
+  <div style="position: absolute; left: 140px; right: 140px; top: 200px; height: 330px; display: flex; align-items: flex-end; justify-content: center; gap: 0">
+    <div style="display: flex; flex-direction: column; align-items: center">
+      <svg viewBox="0 0 120 100" width="110" aria-hidden="true" style="animation: bBob 1.3s ease-in-out .2s infinite"><polygon points="10,60 30,40 70,38 100,50 95,75 60,88 25,84" fill="#ffffff" stroke="#000" stroke-width="7" stroke-linejoin="round"></polygon><polygon points="70,40 72,18 88,8 102,16 104,36 92,46" fill="#ffffff" stroke="#000" stroke-width="7" stroke-linejoin="round"></polygon><polygon points="102,20 119,27 102,34" fill="#FF9F1C" stroke="#000" stroke-width="6"></polygon></svg>
+      <div style="width: 150px; height: 120px; background: #C9B8FF; border: 6px solid #000000; border-radius: 14px 0 0 0; display: flex; align-items: center; justify-content: center; font-family: 'Lilita One', sans-serif; font-size: 64px">2</div>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; margin: 0 -6px">
+      <svg viewBox="0 0 120 100" width="150" aria-hidden="true" style="overflow: visible; animation: bBob 1s ease-in-out infinite"><polygon points="10,60 30,40 70,38 100,50 95,75 60,88 25,84" fill="#836EF9" stroke="#000" stroke-width="7" stroke-linejoin="round"></polygon><polygon points="70,40 72,18 88,8 102,16 104,36 92,46" fill="#836EF9" stroke="#000" stroke-width="7" stroke-linejoin="round"></polygon><polygon points="102,20 119,27 102,34" fill="#FF9F1C" stroke="#000" stroke-width="6"></polygon><polygon points="78,10 88,-14 98,8" fill="#FFC93C" stroke="#000" stroke-width="5" stroke-linejoin="round"></polygon></svg>
+      <div style="width: 170px; height: 190px; background: #ffffff; border: 6px solid #000000; border-radius: 14px 14px 0 0; display: flex; align-items: center; justify-content: center; font-family: 'Lilita One', sans-serif; font-size: 96px; color: #836EF9; -webkit-text-stroke: 6px #000; paint-order: stroke fill">1</div>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center">
+      <svg viewBox="0 0 120 100" width="100" aria-hidden="true" style="animation: bBob 1.4s ease-in-out .4s infinite"><polygon points="10,60 30,40 70,38 100,50 95,75 60,88 25,84" fill="#FF7AB6" stroke="#000" stroke-width="7" stroke-linejoin="round"></polygon><polygon points="70,40 72,18 88,8 102,16 104,36 92,46" fill="#FF7AB6" stroke="#000" stroke-width="7" stroke-linejoin="round"></polygon><polygon points="102,20 119,27 102,34" fill="#FF9F1C" stroke="#000" stroke-width="6"></polygon></svg>
+      <div style="width: 150px; height: 90px; background: #FF9F1C; border: 6px solid #000000; border-radius: 0 14px 0 0; display: flex; align-items: center; justify-content: center; font-family: 'Lilita One', sans-serif; font-size: 56px">3</div>
+    </div>
+  </div>
+  <div aria-hidden="true" style="position: absolute; left: 100px; right: 100px; top: 524px; height: 14px; background: #000000; border-radius: 7px"></div>
+
+  <div style="position: absolute; left: 64px; right: 64px; bottom: 70px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
+    <div style="font-family: 'Lilita One', sans-serif; font-size: 70px; line-height: 1; color: #ffffff; -webkit-text-stroke: 9px #000; paint-order: stroke fill; animation: bPop 2s ease-in-out infinite">[Title]</div>
+    <div style="font-size: 24px; font-weight: 900">P1 · [Duck name] · Kali Code Sprint</div>
+    <div style="font-size: 18px; font-weight: 800">Earned on the track. Cannot be bought or sold.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":800,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const cols = ['#ffffff', '#FF7AB6', '#4ED1C5', '#836EF9', '#B8F35A', '#1E1446'];
+    const confetti = [];
+    for (let j = 0; j < 14; j++) confetti.push({ x: (j * 157) % 760 + 10, w: 16 + (j % 3) * 8, c: cols[j % cols.length], d: (3 + (j % 4) * 0.6).toFixed(1), dl: ((j * 0.41) % 3).toFixed(2) });
+    return { confetti: confetti };
+  }
+}
+</script>
+</body>
+</html>

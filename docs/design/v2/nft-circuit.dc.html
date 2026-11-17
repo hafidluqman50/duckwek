@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Circuit NFT</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&amp;family=Rubik:wght@500;700;800;900&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+@keyframes tDash{to{stroke-dashoffset:-60}}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</helmet>
+<div style="position: relative; width: 800px; height: 800px; overflow: hidden; background: #4ED1C5; font-family: Rubik, system-ui, sans-serif; color: #1E1446">
+  <div style="position: absolute; inset: 28px; border: 8px solid #000000; border-radius: 48px; background: #B8F35A; box-shadow: 0 14px 0 #000000"></div>
+
+  <div style="position: absolute; left: 64px; top: 60px; right: 64px; display: flex; justify-content: space-between; align-items: center">
+    <span style="padding: 8px 18px; background: #1E1446; color: #FFC93C; border: 5px solid #000000; border-radius: 999px; font-family: 'Lilita One', sans-serif; font-size: 26px">CIRCUIT</span>
+    <span style="padding: 8px 18px; background: #ffffff; border: 5px solid #000000; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 700">#[id]</span>
+  </div>
+
+  <svg viewBox="80 80 800 540" width="672" height="454" role="img" aria-label="Merapi Ring layout with a duck lapping it" style="position: absolute; left: 64px; top: 130px">
+    <path id="lap" d="M260 560 L650 560 Q820 560 820 430 L820 380 Q820 300 740 300 L620 300 Q560 300 560 240 L560 190 Q560 120 490 120 L270 120 Q130 120 130 260 L130 420 Q130 560 260 560 Z" fill="none" stroke="#000000" stroke-width="70" stroke-linejoin="round"></path>
+    <path d="M260 560 L650 560 Q820 560 820 430 L820 380 Q820 300 740 300 L620 300 Q560 300 560 240 L560 190 Q560 120 490 120 L270 120 Q130 120 130 260 L130 420 Q130 560 260 560 Z" fill="none" stroke="#1E1446" stroke-width="52" stroke-linejoin="round"></path>
+    <path d="M260 560 L650 560 Q820 560 820 430 L820 380 Q820 300 740 300 L620 300 Q560 300 560 240 L560 190 Q560 120 490 120 L270 120 Q130 120 130 260 L130 420 Q130 560 260 560 Z" fill="none" stroke="#C9B8FF" stroke-width="5" stroke-dasharray="30 30" style="animation: tDash 1s linear infinite"></path>
+    <rect x="330" y="530" width="16" height="60" fill="#ffffff" stroke="#000000" stroke-width="3"></rect>
+    <rect x="330" y="530" width="8" height="15" fill="#000000"></rect><rect x="338" y="545" width="8" height="15" fill="#000000"></rect><rect x="330" y="560" width="8" height="15" fill="#000000"></rect><rect x="338" y="575" width="8" height="15" fill="#000000"></rect>
+    <g>
+      <g transform="translate(-24,-24) scale(0.4)">
+        <polygon points="10,60 30,40 70,38 100,50 95,75 60,88 25,84" fill="#FFC93C" stroke="#000" stroke-width="8" stroke-linejoin="round"></polygon>
+        <polygon points="70,40 72,18 88,8 102,16 104,36 92,46" fill="#FFC93C" stroke="#000" stroke-width="8" stroke-linejoin="round"></polygon>
+        <polygon points="102,20 119,27 102,34" fill="#FF9F1C" stroke="#000" stroke-width="7"></polygon>
+      </g>
+      <animateMotion dur="6s" repeatCount="indefinite" rotate="auto" path="M260 560 L650 560 Q820 560 820 430 L820 380 Q820 300 740 300 L620 300 Q560 300 560 240 L560 190 Q560 120 490 120 L270 120 Q130 120 130 260 L130 420 Q130 560 260 560 Z"></animateMotion>
+    </g>
+  </svg>
+
+  <div style="position: absolute; left: 64px; right: 64px; bottom: 64px; display: flex; flex-direction: column; gap: 12px">
+    <div style="font-family: 'Lilita One', sans-serif; font-size: 66px; line-height: 1; color: #ffffff; -webkit-text-stroke: 8px #000; paint-order: stroke fill">Merapi Ring</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; font-size: 22px; font-weight: 900">
+      <span style="padding: 6px 16px; background: #ffffff; border: 4px solid #000000; border-radius: 999px">[n] laps</span>
+      <span style="padding: 6px 16px; background: #ffffff; border: 4px solid #000000; border-radius: 999px">6 turns</span>
+      <span style="padding: 6px 16px; background: #ffffff; border: 4px solid #000000; border-radius: 999px">[length] m</span>
+      <span style="padding: 6px 16px; background: #FFC93C; border: 4px solid #000000; border-radius: 999px">Holder earns 50%</span>
+    </div>
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700">LAYOUT · [segment code] · hash [0x…]</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":800,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

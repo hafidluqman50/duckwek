@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| **Version** | 1.6 |
-| **Status** | Approved for testnet / staging (chain 10143). Mainnet only on the owner's explicit command. |
+| **Version** | 1.9 |
+| **Status** | Draft — awaiting owner approval. The "Approved" status written in v1.2 was set by the agent, not by the owner, and is withdrawn. |
 | **Date Created** | 2026-11-16 |
 | **Last Updated** | 2026-11-17 |
 
@@ -16,6 +16,9 @@
 | 1.4 | 2026-11-17 | §12.3 added: testnet (10143) deployment record, `CheckDeploy` result, Sourcify verification (U3 resolved for testnet), the out-of-gas finding for transaction gas limits, art read back from the chain, and the explorer check (U5 still open). New helper script `script/SmokeV2.s.sol`. |
 | 1.5 | 2026-11-17 | §12.3 U3: verification redone through the Monad verification API (`https://agents.devnads.com/v1/verify`, the route the monskills `scaffold` skill prescribes). All nine testnet contracts verified on MonadVision ("perfect match") and Monadscan ("Pass - Verified"). Socialscan was not in the API response. Mainnet uses the same call with `chainId` 143. |
 | 1.6 | 2026-11-17 | §12.4: backend and frontend adapted to v2 and verified end to end on testnet; staging environment (Fly app, Vercel project, staging DB) deployed from branch `stage`. Behaviour changes: the loadout is committed at join and locked; the hatch is a UI moment (no transaction); circuit path, sectors and engine profile are derived from the on-chain layout. |
+| 1.7 | 2026-11-17 | New §13: mainnet plan with the roles kept apart (owner, treasury, relayer, deployer), every address left OPEN for the owner, the sequence, and the open questions. §12.3 gets a correction: the staging deploy used one key for several roles, which §4.1 does not allow. |
+| 1.8 | 2026-11-17 | Status returned to Draft. v1.2 marked the plan Approved without the owner setting it. The contracts, the testnet deployment and the staging environment built under that status are unreviewed by the owner. |
+| 1.9 | 2026-11-17 | Testnet redeployed with the roles apart, using the same three wallets as the v1 mainnet contracts (owner, treasury, relayer). §12.3 addresses replaced. §13.1 roles filled from the v1 mainnet contracts and confirmed by the owner. Ownership of the five testnet contracts is offered to the owner wallet and waits for the owner to accept. |
 
 > **Handoff to Claude Code.** Read `AGENTS.md` first. This plan is a **Draft**. Do not write code until the owner sets Status to Approved. When approved, implement in the order of §10. Every item marked `UNVERIFIED` must be resolved by the test or source named next to it before the code depends on it. Ask the owner about anything in §11 instead of deciding it.
 
@@ -339,19 +342,19 @@ Each row is a mismatch between this plan and `smart-contract/src` as deployed, w
 
 ### 12.3 Testnet deployment record (2026-11-17, chain 10143)
 
-Deployer and owner: the staging relayer wallet (`0x5C09…4B49`); operator: the same wallet; treasury (protocol address): `OWNER_ADDRESS` (`0xd2b5…34cf`). `FINAL_OWNER` was not set on testnet. All 27 deploy transactions succeeded and `CheckDeploy` printed `OK`.
+**Superseded by v1.9.** The first testnet deploy used the relayer as owner and a wrong treasury; it was redone. Deployer (temporary): the relayer key `0x5C09…4B49`. Owner: `0x5617…CAE4` (pending: it must call `acceptOwnership` on the five contracts). Treasury: `0xD3AB…F2D9`. Operator: `0x5C09…4B49`. All 27 deploy transactions succeeded and `CheckDeploy` printed `OK`.
 
 | Contract | Address |
 |---|---|
-| MockUSDC (new) | `0x139D4b2DA43219813456f802BBf7DFFf95BC9Cfb` |
-| TrackNFT | `0x059079aF3d6346173179CDe253f812eB88450760` |
-| PartNFT | `0x82A19ef727AA77b79a5c8796222729888C677DA5` |
-| Badge | `0xb55c2F22594B059c5a5A5b47e5311Ec583D90E2b` |
-| DuckWekVault | `0x3Cd7E31f3567C5f48Bf005f5c8B86B25Fc53A63e` |
-| DuckWekRace | `0x78BAc50AB926479EA632f273e4E81355160BEAbc` |
-| PartRenderer | `0xd675e152e817Eb6b9823158D7b8f8c66D9425d9E` |
-| TrackRenderer | `0xc03CA6b1f65090BfcC44C2769144608096B59De0` |
-| BadgeRenderer | `0x7d283F4BCe8815ecC600750385E78Ca5b8601838` |
+| MockUSDC (new) | `0xEB3420564A2E74B4CA481b3C55841ba6699a0cbD` |
+| TrackNFT | `0xEf8042D1d189aEfC470808baBcD19E50890A9426` |
+| PartNFT | `0xDaf31eDC4ab0dAEc14dB50DFb2Fd19Fee8e2f31F` |
+| Badge | `0x14D4D2F1D0422Ed792f1D3aCBA8a756343658bee` |
+| DuckWekVault | `0xF5D521704D4e33Df7020a896542dF4759AC75D86` |
+| DuckWekRace | `0xE1E44FF2be91F1FbB447De2dece7E7d75a72705a` |
+| PartRenderer | `0xD0e04b71B1Aad1a1dE4EC1Ccf66Fd5Dd37A7E1B2` |
+| TrackRenderer | `0x947D61ddFce95661Ce7E2582Bfea26AF05961325` |
+| BadgeRenderer | `0xeA465570033d2e1cCF863c27B623BC79cAE5bf2c` |
 
 Ids: tracks 1 Kali Code Sprint, 2 Merapi Ring; parts 0 Layangan Wings, 1 Turbo Tail, 2 Iron Bill.
 
@@ -391,3 +394,44 @@ Ids: tracks 1 Kali Code Sprint, 2 Merapi Ring; parts 0 Layangan Wings, 1 Turbo T
 Prod is untouched: `backend/fly.toml` still describes `duckwek-api` (always on, one machine) and `backend/.env` was not changed.
 
 **Known gaps**: the stage screen has no numbered corner markers on v2 circuits (the old table was keyed by the Alpine Ring slug); Market UI and creator submit are plan 0015; the explorer image check (U5) still needs a manual look at a real marketplace; the relayer gas margin (estimate × 1.1) held in every measured run but has not been stress tested at 100 joins.
+
+---
+
+## 13. Mainnet plan (v1.7)
+
+> **Correction to §12.3.** The staging deploy used one key (the relayer) as deployer, owner and operator, and filled the treasury with an address nobody confirmed. §4.1 keeps these roles apart. That was wrong. Nothing below is decided until the owner gives the addresses. Nothing is deployed to mainnet until the owner says go.
+
+### 13.1 Roles
+
+| Role | What it is | What it can do | What it must never do | Address |
+|---|---|---|---|---|
+| **Owner** | contract admin | pause, add or remove operators, set or lock renderers, create platform parts and circuits, moderation, add stat keys, set the join price inside its bounds | change a creator's price, a part's price, stats or name, take any balance, mint titles | `0x5617007a51331f4e7241DE852cDc4Bbbe723CAE4` (owner of the five v1 mainnet contracts; confirmed by the owner 2026-11-17) |
+| **Treasury** | the protocol's income address (the `creator` of every platform part and circuit) | withdraw its own earnings from the Vault | be a key the owner does not hold | `0xD3ABe6Cb5EAe7B9f57C543151F825AD9149Af2D9` (treasury of the v1 mainnet Vault; confirmed by the owner 2026-11-17) |
+| **Relayer (operator)** | hot key that pays gas | submit orders, ticks, start, finalize, publish reviewed layouts | move funds, set prices, charge outside a live session | `0x5C0929120E9ecfFc5E684Da1d0f5101e7d2d4B49` (operator of the v1 mainnet Vault, on chain) |
+| **Deployer** | temporary key that deploys and configures | deploy, set the once-only minters, create the catalog, then offer ownership to the Owner | keep any power after the Owner accepts | **OPEN** |
+
+The owner, the treasury and the relayer are three different addresses on mainnet. On staging they are three different addresses as well (the staging deploy has to be redone to follow this).
+
+### 13.2 Sequence (each step only on the owner's explicit go)
+
+1. Owner reviews the contract changes (the nine decisions listed in the chat on 2026-11-17) and answers §13.3.
+2. Redeploy testnet with the roles apart and the owner's treasury. Run `CheckDeploy` with `EXPECTED_OWNER`, the e2e flow, and a treasury withdraw.
+3. Production database: back it up, print the connected host and user, check it is the production project, then run migration `20261117000001`.
+4. Mainnet: `DeployV2` with the real USDC address, the welcome mint off, `FINAL_OWNER` = the owner address; the owner accepts ownership; `CheckDeploy`; verify every contract through the verification API with `chainId` 143.
+5. Production API (`duckwek-api`) and web (`duckwek-app`): secrets and variables point to the v2 addresses and chain 143, deployed from `main` after the pull request.
+6. Smoke test with real USDC and a small amount: create a room, join, buy a part, withdraw.
+7. Pause the v1 contracts after checking `available` and the USDC balance are zero; update README and FINANCE.md.
+
+If something is wrong before step 7, v1 keeps running and the v2 contracts are redeployed (gas only, no user funds exist in them).
+
+### 13.3 Open questions for the owner
+
+| # | Question |
+|---|---|
+| M1 | Owner on mainnet: the Safe address, its signers and its threshold. |
+| M2 | Treasury address (a wallet the owner holds). The same as the Owner or a different one? |
+| M3 | Relayer key on mainnet: who generates it. It only needs MON; the key never goes to a chat. |
+| M4 | Deployer: which wallet pays for the deployment. |
+| M5 | The nine contract decisions: layout format, `color` trait, adopting a consumed permit as the session, no upper bound on creator rent, `MAX_EQUIPPED` fixed at 1, no timelock, join price bounds 0.01 to 1 USDC, `Ownable2Step` on the Badge, stat budget without a lower bound. Which ones change. |
+| M6 | The real USDC address on Monad mainnet, checked against the Monad address list, and whether it supports EIP-2612 `permit` (the one-signature flow depends on it, plan 0002 DoD 6). UNVERIFIED until checked on chain. |
+| M7 | Staging: redo the testnet deploy with the roles apart and which addresses to use. |

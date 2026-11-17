@@ -33,7 +33,7 @@ contract DuckWekRace is DuckWekRoles {
     /// @dev Slot 0 packs the fields read on the hot `tick` path. `standingRoot` and `seed` use their own slots.
     struct Room {
         Status status;
-        uint8 trackId; // off-chain track id (1 = Kali Code Sprint, 2 = Alpine Ring)
+        uint64 trackId; // TrackNFT id (platform circuits and creator circuits share one id space)
         uint32 startBlock;
         uint32 endBlock;
         uint16 players;
@@ -53,10 +53,11 @@ contract DuckWekRace is DuckWekRoles {
     /// @notice Achievements already earned by a player. bit0 winner, bit1 runner-up, bit2 third.
     mapping(address => uint8) public achieved;
 
-    event RoomCreated(uint256 indexed roomId, bytes32 indexed roomKey, address indexed host, uint8 trackId, uint256 paid);
-    event Joined(uint256 indexed roomId, address indexed player, uint8 template);
+    event RoomCreated(uint256 indexed roomId, bytes32 indexed roomKey, address indexed host, uint64 trackId, uint32 layoutVersion, uint256 paid);
+    /// @dev The full loadout is committed here, before `start` fixes the seed.
+    event Joined(uint256 indexed roomId, address indexed player, DuckWekVault.Loadout loadout);
     event JoinFailed(uint256 indexed roomId, address indexed player, bytes reason);
-    event Started(uint256 indexed roomId, uint32 startBlock, uint16 players, bytes32 participantsRoot, bytes32 seed);
+    event Started(uint256 indexed roomId, uint32 startBlock, uint16 players, bytes32 participantsRoot, bytes32 seed, bytes32 engineVersion);
     /// @dev `n` = block.number - startBlock at inclusion. May land several per block: the step is what counts.
     event Tick(uint256 indexed roomId, uint32 n);
     event Finalized(uint256 indexed roomId, bytes32 standingRoot, uint32 endBlock, address[3] podium);
@@ -64,7 +65,6 @@ contract DuckWekRace is DuckWekRoles {
 
     error WrongStatus(Status current);
     error BadKind();
-    error TrackOutOfRange();
     error RoomKeyUsed();
     error WrongOrder();
     error LengthMismatch();
@@ -92,7 +92,6 @@ contract DuckWekRace is DuckWekRoles {
         returns (uint256 id)
     {
         if (o.kind != uint8(DuckWekVault.Kind.CREATE_ROOM)) revert BadKind();
-        if (o.ref > type(uint8).max) revert TrackOutOfRange();
         if (roomIdOf[o.roomKey] != 0) revert RoomKeyUsed();
 
         _charge(o, p); // charges the rent, registers the host as the first entrant
@@ -100,9 +99,10 @@ contract DuckWekRace is DuckWekRoles {
         id = ++nextRoomId;
         roomIdOf[o.roomKey] = id;
         keyOf[id] = o.roomKey;
-        rooms[id] = Room({status: Status.Open, trackId: uint8(o.ref), startBlock: 0, endBlock: 0, players: 1, standingRoot: bytes32(0), seed: bytes32(0)});
-        emit RoomCreated(id, o.roomKey, o.payer, uint8(o.ref), o.amount);
-        emit Joined(id, o.payer, o.template);
+        (, uint64 trackId,,, uint32 layoutVersion) = vault.rooms(o.roomKey);
+        rooms[id] = Room({status: Status.Open, trackId: trackId, startBlock: 0, endBlock: 0, players: 1, standingRoot: bytes32(0), seed: bytes32(0)});
+        emit RoomCreated(id, o.roomKey, o.payer, trackId, layoutVersion, o.amount);
+        emit Joined(id, o.payer, o.loadout);
     }
 
     /// @notice Record paid joins. Each order is a player's ticket (kind JOIN_ROOM), charged by the Vault under that player's
@@ -126,7 +126,7 @@ contract DuckWekRace is DuckWekRoles {
             if (o.kind != uint8(DuckWekVault.Kind.JOIN_ROOM) || o.roomKey != key) revert WrongOrder();
             try this.chargeSelf(o, ps[i]) {
                 ++paid;
-                emit Joined(roomId, o.payer, o.template);
+                emit Joined(roomId, o.payer, o.loadout);
             } catch (bytes memory reason) {
                 emit JoinFailed(roomId, o.payer, reason);
             }
@@ -141,8 +141,10 @@ contract DuckWekRace is DuckWekRoles {
     }
 
     /// @notice Close joins, fix `startBlock` and the seed. `players` and `participantsRoot` are the operator's final
-    ///         participant list (humans plus bots; root over the ordered list; the order defines the duck index).
-    function start(uint256 roomId, uint16 players, bytes32 participantsRoot) external onlyOperator whenNotPaused {
+    ///         participant list (humans plus bots; root over the ordered list; the order defines the duck index). Each leaf is
+    ///         `keccak256(abi.encode(address | botId, template, partBySlot))`. `engineVersion` names the engine build that
+    ///         replays the race.
+    function start(uint256 roomId, uint16 players, bytes32 participantsRoot, bytes32 engineVersion) external onlyOperator whenNotPaused {
         Room storage r = rooms[roomId];
         if (r.status != Status.Open) revert WrongStatus(r.status);
         bytes32 seed = keccak256(abi.encode(block.prevrandao, keyOf[roomId], players));
@@ -150,7 +152,7 @@ contract DuckWekRace is DuckWekRoles {
         r.startBlock = uint32(block.number);
         r.players = players;
         r.seed = seed;
-        emit Started(roomId, uint32(block.number), players, participantsRoot, seed);
+        emit Started(roomId, uint32(block.number), players, participantsRoot, seed, engineVersion);
     }
 
     /// @notice Record one race step. `n` is computed here from the block that includes this transaction.
@@ -188,7 +190,7 @@ contract DuckWekRace is DuckWekRoles {
             uint8 have = achieved[p];
             if (have & bit != 0) continue; // already earned this kind: event only
             achieved[p] = have | bit;
-            badge.award(p, bytes32(roomId), uint64(roomId), uint16(i + 1), _title(i));
+            badge.award(p, bytes32(roomId), uint64(roomId), uint16(i + 1), r.trackId, _title(i));
             emit AchievementAwarded(roomId, p, i);
         }
         emit Finalized(roomId, standingRoot, uint32(block.number), podium);

@@ -8,6 +8,7 @@ import {SegmentLib} from "./SegmentLib.sol";
 /// @title Circuit NFT art (design: docs/design/v2/nft-circuit.dc.html)
 /// @notice The road is drawn from the track's own segment bytes (`SegmentLib` turtle code), so every layout renders its own
 ///         shape. `animation_url` adds the duck lapping the path (`animateMotion`) and the dashed centre line.
+// slither-disable-start encode-packed-collision -- abi.encodePacked only concatenates picture text here; the result is never hashed or compared
 contract TrackRenderer is ITrackRenderer {
     uint256 private constant BOX_X = 50;
     uint256 private constant BOX_Y = 50;
@@ -145,6 +146,7 @@ contract TrackRenderer is ITrackRenderer {
 
     // ------------------------------------------------------------------ path
 
+    // slither-disable-start divide-before-multiply -- pixel layout of a picture: rounding is irrelevant
     function _shape(bytes memory seg) private pure returns (Shape memory sh) {
         (int256[] memory xs, int256[] memory ys, bool closed, uint256 h0) = SegmentLib.walk(seg);
         uint256 n = xs.length;
@@ -178,6 +180,7 @@ contract TrackRenderer is ITrackRenderer {
         sh.heading = h0;
         sh.d = _smooth(px, py, closed);
     }
+    // slither-disable-end divide-before-multiply
 
     function _mid(uint256 a, uint256 b) private pure returns (string memory) {
         return string.concat(SvgLib.u2s((a + b) / 2));
@@ -204,3 +207,4 @@ contract TrackRenderer is ITrackRenderer {
         return string(abi.encodePacked(d, "L", SvgLib.u2s(px[n - 1]), " ", SvgLib.u2s(py[n - 1])));
     }
 }
+// slither-disable-end encode-packed-collision

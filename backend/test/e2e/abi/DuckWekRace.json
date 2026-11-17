@@ -1028,6 +1028,11 @@
   },
   {
     "type": "error",
+    "name": "ReentrancyGuardReentrantCall",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "RoomKeyUsed",
     "inputs": []
   },

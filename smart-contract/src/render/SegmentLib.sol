@@ -46,7 +46,7 @@ library SegmentLib {
         uint256 n = seg.length;
         xs = new int256[](n + 1);
         ys = new int256[](n + 1);
-        uint256 h;
+        uint256 h = 0;
         for (uint256 i; i < n; ++i) {
             uint8 t = uint8(seg[i]) >> 4;
             if (t == 1) h = (h + 7) % 8;

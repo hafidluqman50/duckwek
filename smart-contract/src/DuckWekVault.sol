@@ -146,6 +146,7 @@ contract DuckWekVault is DuckWekRoles, EIP712, ReentrancyGuard {
     error BadPart(uint256 slot, uint16 typeId);
     error NoLicense(uint256 slot, uint16 typeId);
     error PriceOutOfRange();
+    error ZeroAddress();
     error TrackInactive();
     error RoomExists();
     error RoomNotFound();
@@ -158,6 +159,7 @@ contract DuckWekVault is DuckWekRoles, EIP712, ReentrancyGuard {
         DuckWekRoles(owner_)
         EIP712("DuckWekVault", "1")
     {
+        if (usdc_ == address(0) || tracks_ == address(0) || parts_ == address(0) || treasury_ == address(0)) revert ZeroAddress();
         usdc = IERC20(usdc_);
         tracks = TrackNFT(tracks_);
         parts = PartNFT(parts_);
@@ -167,6 +169,7 @@ contract DuckWekVault is DuckWekRoles, EIP712, ReentrancyGuard {
     // ---------------------------------------------------------------- admin
 
     function setTreasury(address treasury_) external onlyOwner {
+        if (treasury_ == address(0)) revert ZeroAddress();
         treasury = treasury_;
         emit TreasurySet(treasury_);
     }
@@ -213,6 +216,7 @@ contract DuckWekVault is DuckWekRoles, EIP712, ReentrancyGuard {
 
     // ---------------------------------------------------------------- operator
 
+    // slither-disable-start reentrancy-no-eth,reentrancy-benign -- guarded by nonReentrant, operator only; the only external call is the payment token permit
     /// @notice First order of a session: apply the player's permit, then charge. A permit that cannot be applied (already
     ///         used by someone else, expired) does not block the order: the allowance may already be there, and if it is
     ///         not, the transfer reverts.
@@ -235,7 +239,9 @@ contract DuckWekVault is DuckWekRoles, EIP712, ReentrancyGuard {
         }
         return _spend(o);
     }
+    // slither-disable-end reentrancy-no-eth,reentrancy-benign
 
+    // slither-disable-start timestamp -- deadlines and the session end are compared with block.timestamp on purpose
     /// @dev Someone submitted the player's permit first (front-run), so applying it here reverted. If the permit really was
     ///      signed by the payer for this Vault and is the one that was just consumed (nonce - 1), it opened the allowance,
     ///      so it opens the session. A session already opened with the same value and deadline is never reset.
@@ -251,19 +257,22 @@ contract DuckWekVault is DuckWekRoles, EIP712, ReentrancyGuard {
                 keccak256(abi.encode(PERMIT_TYPEHASH, payer, address(this), p.value, nonce - 1, p.deadline))
             )
         );
-        (address signer, ECDSA.RecoverError err,) = ECDSA.tryRecover(digest, p.v, p.r, p.s);
+        // slither-disable-next-line unused-return
+        (address signer, ECDSA.RecoverError err,) = ECDSA.tryRecover(digest, p.v, p.r, p.s); // the third value is the error argument
         if (err != ECDSA.RecoverError.NoError || signer != payer) return;
         sessionEnd[payer] = uint64(p.deadline);
         sessionCap[payer] = p.value;
         sessionSpent[payer] = 0;
         emit SessionOpened(payer, uint64(p.deadline), p.value);
     }
+    // slither-disable-end timestamp
 
     /// @notice Later orders of a session: charged with `transferFrom` under the allowance the permit created.
     function spend(Order calldata o) external onlyOperator whenNotPaused nonReentrant returns (uint256) {
         return _spend(o);
     }
 
+    // slither-disable-start timestamp -- deadlines and the session end are compared with block.timestamp on purpose
     /// @notice Gasless withdraw: the owner signs, the operator submits. Funds only ever go to `w.to`
     ///         chosen by the owner, so the operator cannot redirect them.
     function withdrawWithSig(Withdrawal calldata w, bytes calldata sig) external onlyOperator nonReentrant {
@@ -276,6 +285,7 @@ contract DuckWekVault is DuckWekRoles, EIP712, ReentrancyGuard {
         usedNonce[w.owner][w.nonce] = true;
         _withdraw(w.owner, w.to, w.amount);
     }
+    // slither-disable-end timestamp
 
     // ---------------------------------------------------------------- user
 
@@ -293,16 +303,17 @@ contract DuckWekVault is DuckWekRoles, EIP712, ReentrancyGuard {
         if (o.amount != price) revert WrongAmount(price, o.amount);
         _checkSession(o.payer, price);
 
+        // Checks, then effects, then the token transfer last (the order reverts as a whole if the transfer fails).
         if (o.kind == uint8(Kind.CREATE_ROOM)) {
             if (!tracks.track(o.ref).active) revert TrackInactive();
             if (rooms[o.roomKey].host != address(0)) revert RoomExists();
             _checkLoadout(o.payer, o.loadout);
-            _collect(o.payer, price);
             _split(tracks.ownerOf(o.ref), price, TRACK_CREATOR_BPS, o.kind);
             // The host rents the circuit and races: the rent covers the host's own entry.
             uint32 lv = tracks.versionOf(o.ref);
             rooms[o.roomKey] = Room(o.payer, uint64(o.ref), uint64(block.timestamp), 1, lv);
             joined[o.roomKey][o.payer] = true;
+            _collect(o.payer, price);
             emit RoomCreated(o.roomKey, o.payer, o.ref, price, lv);
         } else if (o.kind == uint8(Kind.JOIN_ROOM)) {
             Room storage r = rooms[o.roomKey];
@@ -310,20 +321,21 @@ contract DuckWekVault is DuckWekRoles, EIP712, ReentrancyGuard {
             if (joined[o.roomKey][o.payer]) revert AlreadyJoined();
             if (r.players >= MAX_PLAYERS) revert RoomFull();
             _checkLoadout(o.payer, o.loadout);
-            _collect(o.payer, price);
             _split(tracks.ownerOf(r.trackId), price, JOIN_CREATOR_BPS, o.kind);
             joined[o.roomKey][o.payer] = true;
             r.players += 1;
+            _collect(o.payer, price);
             emit RoomJoined(o.roomKey, o.payer, price);
         } else {
             PartNFT.PartType memory pt = parts.partType(o.ref);
-            _collect(o.payer, price);
             _split(pt.creator, price, PART_CREATOR_BPS, o.kind);
+            _collect(o.payer, price);
             result = parts.mintLicense(o.payer, o.ref);
             emit PartPurchased(o.payer, o.ref, result, price);
         }
     }
 
+    // slither-disable-start timestamp -- deadlines and the session end are compared with block.timestamp on purpose
     /// @dev The charge must fall inside the payer's session: not after its end, not above its cap.
     function _checkSession(address payer, uint256 price) internal {
         if (block.timestamp > sessionEnd[payer]) revert SessionExpired();
@@ -331,12 +343,14 @@ contract DuckWekVault is DuckWekRoles, EIP712, ReentrancyGuard {
         if (spent > sessionCap[payer]) revert SessionCapExceeded(sessionCap[payer], spent);
         sessionSpent[payer] = spent;
     }
+    // slither-disable-end timestamp
 
+    // slither-disable-start calls-loop -- at most 3 slots, one part allowed (MAX_EQUIPPED), trusted PartNFT
     /// @dev Template is 0..2, at most MAX_EQUIPPED slots are filled, each filled slot holds a part of that slot that the
     ///      payer has a licence for. `NO_PART` marks an empty slot.
     function _checkLoadout(address payer, Loadout calldata l) internal view {
         if (l.template > 2) revert BadTemplate();
-        uint256 equipped;
+        uint256 equipped = 0;
         for (uint256 slot; slot < 3; ++slot) {
             uint16 typeId = l.partBySlot[slot];
             if (typeId == NO_PART) continue;
@@ -345,12 +359,17 @@ contract DuckWekVault is DuckWekRoles, EIP712, ReentrancyGuard {
             if (parts.licenseOf(payer, typeId) == 0) revert NoLicense(slot, typeId);
         }
     }
+    // slither-disable-end calls-loop
 
     /// @dev Pulls exactly `amount` from the payer under the allowance of their permit. On the mock token the first order of a
     ///      wallet also mints the welcome USDC, so a brand-new player can pay it.
     function _collect(address payer, uint256 amount) internal {
-        if (welcomeEnabled) IWelcomeToken(address(usdc)).welcomeMint(payer);
+        // slither-disable-next-line unused-return
+        if (welcomeEnabled) IWelcomeToken(address(usdc)).welcomeMint(payer); // false when already welcomed: not an error
         if (amount == 0) return;
+        // `payer` is the order's payer, chosen by the operator by design (one signature at connect, plan 0013 D7). What the operator can
+        // charge is bounded by the payer's own permit (allowance), and by the session end and cap enforced in `_checkSession`.
+        // slither-disable-next-line arbitrary-send-erc20
         usdc.safeTransferFrom(payer, address(this), amount);
     }
 

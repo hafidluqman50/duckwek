@@ -498,6 +498,24 @@ contract DuckWekTest is DuckWekBase {
         vm.stopPrank();
     }
 
+    // ---------- zero addresses are refused (Slither: missing-zero-check) ----------
+    function test_zero_addresses_are_refused() public {
+        vm.startPrank(owner);
+        vm.expectRevert(DuckWekVault.ZeroAddress.selector);
+        vault.setTreasury(address(0));
+        vm.expectRevert(DuckWekVault.ZeroAddress.selector);
+        new DuckWekVault(owner, address(usdc), address(tracks), address(parts), address(0));
+        vm.expectRevert(DuckWekVault.ZeroAddress.selector);
+        new DuckWekVault(owner, address(0), address(tracks), address(parts), treasury);
+        PartNFT freshParts = new PartNFT(owner);
+        Badge freshBadge = new Badge(owner, address(tracks));
+        vm.expectRevert(PartNFT.ZeroAddress.selector);
+        freshParts.setMinter(address(0));
+        vm.expectRevert(Badge.ZeroAddress.selector);
+        freshBadge.setMinter(address(0));
+        vm.stopPrank();
+    }
+
     // ---------- 7. set-once minters, one-way renderer lock ----------
     function test_minters_are_set_once() public {
         vm.startPrank(owner);

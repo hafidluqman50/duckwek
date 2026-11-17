@@ -59,6 +59,7 @@ contract PartNFT is ERC721, ERC2981, DuckWekRoles {
     error NotAllowed();
     error RendererIsLocked();
     error NoRenderer();
+    error ZeroAddress();
 
     constructor(address owner_) ERC721("DuckWek Part License", "WEKPART") DuckWekRoles(owner_) {
         _addStat("speed");
@@ -70,6 +71,7 @@ contract PartNFT is ERC721, ERC2981, DuckWekRoles {
 
     /// @notice Set once. A second call reverts, so the owner can never re-point minting.
     function setMinter(address minter_) external onlyOwner {
+        if (minter_ == address(0)) revert ZeroAddress();
         if (minter != address(0)) revert MinterAlreadySet();
         minter = minter_;
         emit MinterSet(minter_);
@@ -157,7 +159,7 @@ contract PartNFT is ERC721, ERC2981, DuckWekRoles {
         if (bytes(name).length == 0 || bytes(name).length > MAX_NAME) revert BadName();
         if (keys.length != values.length || keys.length == 0) revert BadStats();
         typeId = _types.length;
-        int256 sum;
+        int256 sum = 0;
         for (uint256 i; i < keys.length; ++i) {
             if (!isStat[keys[i]]) revert UnknownStat(keys[i]);
             for (uint256 j; j < i; ++j) if (keys[j] == keys[i]) revert BadStats(); // no duplicate key

@@ -9,6 +9,7 @@ library SvgLib {
     bytes16 private constant HEX = "0123456789abcdef";
     bytes16 private constant HEX_UPPER = "0123456789ABCDEF";
 
+    // slither-disable-start assembly -- shrinks a bytes array in place with mstore, the usual way to trim a buffer
     /// @dev Strips every character that could break out of JSON or SVG text: control characters, `" \ < > & '`. Names are
     ///      reviewed before they reach the chain, this is the second line of defence.
     function clean(string memory s) internal pure returns (string memory) {
@@ -25,6 +26,7 @@ library SvgLib {
         }
         return string(o);
     }
+    // slither-disable-end assembly
 
     function i2s(int256 v) internal pure returns (string memory) {
         return Strings.toStringSigned(v);

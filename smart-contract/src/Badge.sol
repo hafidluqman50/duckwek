@@ -3,11 +3,7 @@ pragma solidity 0.8.26;
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
-import {IBadgeRenderer, IRender} from "./render/IRender.sol";
-
-interface ITrackNames {
-    function nameOf(uint256 id) external view returns (string memory);
-}
+import {IBadgeRenderer, IRender, ITrackNames} from "./render/IRender.sol";
 
 /// @title DuckWek title badge (v2). Soulbound (ERC-5192): free, only won, never bought or sold.
 /// @notice `minter` (the Race) is set once, so the owner can never mint a title. The picture is drawn by the renderer from
@@ -38,12 +34,14 @@ contract Badge is ERC721, Ownable2Step {
     error MinterAlreadySet();
     error RendererIsLocked();
     error NoRenderer();
+    error ZeroAddress();
 
     constructor(address owner_, address tracks_) ERC721("DuckWek Title", "WEKTITLE") Ownable(owner_) {
         tracks = ITrackNames(tracks_);
     }
 
     function setMinter(address minter_) external onlyOwner {
+        if (minter_ == address(0)) revert ZeroAddress();
         if (minter != address(0)) revert MinterAlreadySet();
         minter = minter_;
         emit MinterSet(minter_);

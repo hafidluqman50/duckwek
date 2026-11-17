@@ -9,6 +9,7 @@ import {SvgLib} from "./SvgLib.sol";
 ///   slot geometry + slot frame colour, the part's fill colour, two accent colours taken from its name, the name itself,
 ///   one stat bar per registered stat key, and a build label from the highest stat. `image` is static, `animation_url`
 ///   is the same picture with SMIL motion (no script, no external file).
+// slither-disable-start encode-packed-collision -- abi.encodePacked only concatenates picture text here; the result is never hashed or compared
 contract PartRenderer is IPartRenderer {
     using SvgLib for *;
 
@@ -148,8 +149,8 @@ contract PartRenderer is IPartRenderer {
 
     function _build(IRender.PartView memory v) private pure returns (string memory) {
         int256 best = type(int256).min;
-        uint256 bestAt;
-        uint256 ties;
+        uint256 bestAt = 0;
+        uint256 ties = 0;
         for (uint256 i; i < v.values.length; ++i) {
             if (v.values[i] > best) {
                 best = v.values[i];
@@ -213,3 +214,4 @@ contract PartRenderer is IPartRenderer {
         return string(b);
     }
 }
+// slither-disable-end encode-packed-collision

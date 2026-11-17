@@ -6,7 +6,7 @@ import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {DuckWekRoles} from "./DuckWekRoles.sol";
 import {SegmentLib} from "./render/SegmentLib.sol";
-import {ITrackRenderer, IRender} from "./render/IRender.sol";
+import {ITrackRenderer, IRender, ITrackNames} from "./render/IRender.sol";
 
 /// @title DuckWek circuit (ERC-721, v2). Hosts rent a circuit when they create a room.
 /// @notice Plan 0013 §4.5. The income of a room (rent and every ticket) goes to `ownerOf(trackId)` at the moment of the
@@ -15,7 +15,7 @@ import {ITrackRenderer, IRender} from "./render/IRender.sol";
 ///         (`SegmentLib`); each edit publishes a new version (max `MAX_EDITS`, lifetime), old versions stay readable and a room
 ///         keeps the version it was created on. Layouts are published by the operator after review, carrying the holder's
 ///         EIP-712 signature, so the holder never needs MON.
-contract TrackNFT is ERC721, EIP712, DuckWekRoles {
+contract TrackNFT is ERC721, EIP712, DuckWekRoles, ITrackNames {
     struct Track {
         string name;
         address creator;
@@ -112,6 +112,7 @@ contract TrackNFT is ERC721, EIP712, DuckWekRoles {
         id = _create(creator, name, segments, laps, 0, true);
     }
 
+    // slither-disable-start timestamp -- deadlines and the session end are compared with block.timestamp on purpose
     /// @notice Creator circuit, published by the operator after review with the creator's signature.
     function createCreatorTrack(
         address creator,
@@ -132,6 +133,7 @@ contract TrackNFT is ERC721, EIP712, DuckWekRoles {
         usedNonce[creator][nonce] = true;
         id = _create(creator, name, segments, laps, rent, false);
     }
+    // slither-disable-end timestamp
 
     function _create(address creator, string calldata name, bytes calldata segments, uint16 laps, uint96 rent, bool platform)
         internal
@@ -150,6 +152,7 @@ contract TrackNFT is ERC721, EIP712, DuckWekRoles {
 
     // ---------------------------------------------------------------- layout edits (D5: max 3, lifetime)
 
+    // slither-disable-start timestamp -- deadlines and the session end are compared with block.timestamp on purpose
     /// @notice New layout version for a creator circuit, after review, carrying the holder's `LayoutUpdate` signature.
     ///         The nonce is the new version number, so a signature cannot be replayed.
     function publishLayout(uint256 id, bytes calldata segments, uint16 laps, uint256 deadline, bytes calldata holderSig)
@@ -167,6 +170,7 @@ contract TrackNFT is ERC721, EIP712, DuckWekRoles {
         if (!SignatureChecker.isValidSignatureNow(holder, digest, holderSig)) revert BadSignature();
         _publish(id, t, segments, laps);
     }
+    // slither-disable-end timestamp
 
     /// @notice Same edit for a platform circuit: the owner (protocol) publishes it. Counts against the same limit.
     function publishPlatformLayout(uint256 id, bytes calldata segments, uint16 laps) external onlyOwner {

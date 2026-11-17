@@ -84,6 +84,7 @@ contract RenderersTest is DuckWekBase {
     }
 
     function _write(string memory name, string memory svg) internal {
+        vm.createDir("./out/art", true); // git-ignored folder: the test creates it, it does not depend on it existing
         vm.writeFile(string.concat("./out/art/", name, ".svg"), svg);
     }
 

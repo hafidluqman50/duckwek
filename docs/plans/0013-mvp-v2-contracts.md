@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 1.9 |
+| **Version** | 1.10 |
 | **Status** | Draft — awaiting owner approval. The "Approved" status written in v1.2 was set by the agent, not by the owner, and is withdrawn. |
 | **Date Created** | 2026-11-16 |
 | **Last Updated** | 2026-11-17 |
@@ -19,6 +19,7 @@
 | 1.7 | 2026-11-17 | New §13: mainnet plan with the roles kept apart (owner, treasury, relayer, deployer), every address left OPEN for the owner, the sequence, and the open questions. §12.3 gets a correction: the staging deploy used one key for several roles, which §4.1 does not allow. |
 | 1.8 | 2026-11-17 | Status returned to Draft. v1.2 marked the plan Approved without the owner setting it. The contracts, the testnet deployment and the staging environment built under that status are unreviewed by the owner. |
 | 1.9 | 2026-11-17 | Testnet redeployed with the roles apart, using the same three wallets as the v1 mainnet contracts (owner, treasury, relayer). §12.3 addresses replaced. §13.1 roles filled from the v1 mainnet contracts and confirmed by the owner. Ownership of the five testnet contracts is offered to the owner wallet and waits for the owner to accept. |
+| 1.10 | 2026-11-17 | §12.5: Slither audit of the production contracts (53 findings, 0 after the fixes and the reasoned annotations). The testnet contracts deployed before the fixes do not contain them. |
 
 > **Handoff to Claude Code.** Read `AGENTS.md` first. This plan is a **Draft**. Do not write code until the owner sets Status to Approved. When approved, implement in the order of §10. Every item marked `UNVERIFIED` must be resolved by the test or source named next to it before the code depends on it. Ask the owner about anything in §11 instead of deciding it.
 
@@ -435,3 +436,23 @@ If something is wrong before step 7, v1 keeps running and the v2 contracts are r
 | M5 | The nine contract decisions: layout format, `color` trait, adopting a consumed permit as the session, no upper bound on creator rent, `MAX_EQUIPPED` fixed at 1, no timelock, join price bounds 0.01 to 1 USDC, `Ownable2Step` on the Badge, stat budget without a lower bound. Which ones change. |
 | M6 | The real USDC address on Monad mainnet, checked against the Monad address list, and whether it supports EIP-2612 `permit` (the one-signature flow depends on it, plan 0002 DoD 6). UNVERIFIED until checked on chain. |
 | M7 | Staging: redo the testnet deploy with the roles apart and which addresses to use. |
+
+### 12.5 Slither audit (2026-11-17)
+
+`slither . --foundry-out-directory out --filter-paths "lib|test|script|src/mocks"` (Slither 0.11.3) on the production contracts: **53 findings before, 0 after.**
+
+**Fixed in the code**
+- `missing-zero-check`: `Vault.setTreasury`, the `Vault` constructor (usdc, tracks, parts, treasury), `PartNFT.setMinter`, `Badge.setMinter` now revert on the zero address (`ZeroAddress`). Test: `test_zero_addresses_are_refused`.
+- `reentrancy-no-eth` in `Vault._spend`: the order now follows checks, then state, then the token transfer last (the order reverts as a whole if the transfer fails).
+- `reentrancy-no-eth` in the Race: `createRoom`, `joinBatch` and `finalize` are `nonReentrant`.
+- `uninitialized-local` (6): explicit initial values.
+- `missing-inheritance`: `ITrackNames` moved to `render/IRender.sol`, and `TrackNFT` implements it.
+
+**Kept by design, annotated in the code with the reason (`slither-disable-start/next-line`)**
+- `arbitrary-send-erc20` in `Vault._collect`: the payer is chosen by the operator because the owner chose the one-signature session (D7). What can be charged is bounded by the payer's own permit and by the session end and cap (`_checkSession`).
+- `encode-packed-collision` (5, renderers): `abi.encodePacked` only concatenates picture text; it is never hashed or compared.
+- `timestamp` (5): deadlines and the session end are compared with `block.timestamp` on purpose.
+- `calls-loop` (7): at most 3 slots, one `try/catch` charge per ticket (batch capped by `MAX_BATCH`), a loop of 3 podium places; callees are our own contracts.
+- `unused-return` (6), `divide-before-multiply` (4, pixel layout), `reentrancy-benign` and `reentrancy-events` (guarded by `nonReentrant`, operator only, callees are our own contracts and the payment token), `assembly` (1, trimming a buffer with `mstore`).
+
+105 Foundry tests pass after the changes. **The testnet contracts deployed earlier today were built before these fixes**: redeploying them (and verifying again) is needed to test the fixed code on chain.

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {DuckWekRoles} from "./DuckWekRoles.sol";
 import {DuckWekVault} from "./DuckWekVault.sol";
 import {Badge} from "./Badge.sol";
@@ -22,7 +23,7 @@ import {Badge} from "./Badge.sol";
 ///      the race; the operator posts the standing root and the podium. The seed is `prevrandao` at `start`, so the operator
 ///      chooses the moment of `start` (and therefore which `prevrandao` becomes the seed): the contract records who did it,
 ///      it does not prove who picked the moment.
-contract DuckWekRace is DuckWekRoles {
+contract DuckWekRace is DuckWekRoles, ReentrancyGuard {
     enum Status {
         None,
         Open,
@@ -83,12 +84,14 @@ contract DuckWekRace is DuckWekRoles {
 
     // ---------------------------------------------------------------- lifecycle
 
+    // slither-disable-start reentrancy-no-eth,reentrancy-benign -- guarded by nonReentrant, operator only, and the only callees are the Vault, the Badge and the payment token deployed with this system
     /// @notice Open a room. The order is the host's circuit rent (kind CREATE_ROOM, ref = track id). `p.deadline == 0`
     ///         means the allowance from the host's session already exists.
     function createRoom(DuckWekVault.Order calldata o, DuckWekVault.Permit calldata p)
         external
         onlyOperator
         whenNotPaused
+        nonReentrant
         returns (uint256 id)
     {
         if (o.kind != uint8(DuckWekVault.Kind.CREATE_ROOM)) revert BadKind();
@@ -99,12 +102,16 @@ contract DuckWekRace is DuckWekRoles {
         id = ++nextRoomId;
         roomIdOf[o.roomKey] = id;
         keyOf[id] = o.roomKey;
-        (, uint64 trackId,,, uint32 layoutVersion) = vault.rooms(o.roomKey);
+        // slither-disable-next-line unused-return
+        (, uint64 trackId,,, uint32 layoutVersion) = vault.rooms(o.roomKey); // only the track and the layout version are needed
         rooms[id] = Room({status: Status.Open, trackId: trackId, startBlock: 0, endBlock: 0, players: 1, standingRoot: bytes32(0), seed: bytes32(0)});
         emit RoomCreated(id, o.roomKey, o.payer, trackId, layoutVersion, o.amount);
         emit Joined(id, o.payer, o.loadout);
     }
+    // slither-disable-end reentrancy-no-eth,reentrancy-benign
 
+    // slither-disable-start reentrancy-no-eth,reentrancy-benign -- guarded by nonReentrant, operator only, and the only callees are the Vault, the Badge and the payment token deployed with this system
+    // slither-disable-start calls-loop -- one try/catch charge per ticket by design, batch size capped by MAX_BATCH
     /// @notice Record paid joins. Each order is a player's ticket (kind JOIN_ROOM), charged by the Vault under that player's
     ///         session. A ticket that cannot be charged (no allowance, no USDC, already joined, room full) emits `JoinFailed`
     ///         and does not block the others.
@@ -112,6 +119,7 @@ contract DuckWekRace is DuckWekRoles {
         external
         onlyOperator
         whenNotPaused
+        nonReentrant
     {
         Room storage r = rooms[roomId];
         if (r.status != Status.Open) revert WrongStatus(r.status);
@@ -120,7 +128,7 @@ contract DuckWekRace is DuckWekRoles {
         if (n > MAX_BATCH) revert BatchTooLarge();
 
         bytes32 key = keyOf[roomId];
-        uint16 paid;
+        uint16 paid = 0;
         for (uint256 i; i < n; ++i) {
             DuckWekVault.Order calldata o = os[i];
             if (o.kind != uint8(DuckWekVault.Kind.JOIN_ROOM) || o.roomKey != key) revert WrongOrder();
@@ -133,6 +141,8 @@ contract DuckWekRace is DuckWekRoles {
         }
         r.players += paid;
     }
+    // slither-disable-end reentrancy-no-eth,reentrancy-benign
+    // slither-disable-end calls-loop
 
     /// @dev External only so that `joinBatch` can try/catch one charge; callable by this contract alone.
     function chargeSelf(DuckWekVault.Order calldata o, DuckWekVault.Permit calldata p) external {
@@ -162,6 +172,8 @@ contract DuckWekRace is DuckWekRoles {
         emit Tick(roomId, uint32(block.number) - r.startBlock);
     }
 
+    // slither-disable-start reentrancy-no-eth,reentrancy-benign -- guarded by nonReentrant, operator only, and the only callees are the Vault, the Badge and the payment token deployed with this system
+    // slither-disable-start calls-loop -- a loop of 3 podium places, trusted Vault and Badge
     /// @notice Close the race: record the standing root and podium, award first-time achievements.
     /// @param podium ranks 1..3; address(0) where a bot finished (bots receive nothing). Every other entry must have paid
     ///        its entry into this room (checked against the Vault).
@@ -169,6 +181,7 @@ contract DuckWekRace is DuckWekRoles {
         external
         onlyOperator
         whenNotPaused
+        nonReentrant
     {
         Room storage r = rooms[roomId];
         if (r.status != Status.Started) revert WrongStatus(r.status);
@@ -190,15 +203,20 @@ contract DuckWekRace is DuckWekRoles {
             uint8 have = achieved[p];
             if (have & bit != 0) continue; // already earned this kind: event only
             achieved[p] = have | bit;
-            badge.award(p, bytes32(roomId), uint64(roomId), uint16(i + 1), r.trackId, _title(i));
+            // slither-disable-next-line unused-return
+            badge.award(p, bytes32(roomId), uint64(roomId), uint16(i + 1), r.trackId, _title(i)); // the token id is in the Locked event
             emit AchievementAwarded(roomId, p, i);
         }
         emit Finalized(roomId, standingRoot, uint32(block.number), podium);
     }
+    // slither-disable-end reentrancy-no-eth,reentrancy-benign
+    // slither-disable-end calls-loop
 
     function _charge(DuckWekVault.Order calldata o, DuckWekVault.Permit calldata p) internal {
+        // slither-disable-start unused-return
         if (p.deadline != 0) vault.permitAndSpend(o, p);
         else vault.spend(o);
+        // slither-disable-end unused-return
     }
 
     function _title(uint8 kind) private pure returns (string memory) {

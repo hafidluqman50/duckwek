@@ -29,6 +29,10 @@ interface IRender {
     }
 }
 
+interface ITrackNames {
+    function nameOf(uint256 id) external view returns (string memory);
+}
+
 interface IPartRenderer {
     function partURI(uint256 id, IRender.PartView memory v) external view returns (string memory);
 }

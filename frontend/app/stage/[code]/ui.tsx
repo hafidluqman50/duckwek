@@ -9,6 +9,8 @@ import { DuckSvg, MiniDuck } from '@/components/duck/DuckSvg'
 import { sound } from '@/lib/sound'
 import { APP_URL } from '@/lib/config'
 import { SoundButton } from '@/components/play/Shell'
+import { spriteOf } from '@/components/stage/sprites'
+import { MotoGrid, GridMinimap, hasFlyover } from '@/components/stage/MotoGrid'
 
 // Projector (1920x1080, scaled to the screen). Every number below comes from the stage section of Prototype3.dc.html.
 const W = 1920, H = 1080
@@ -56,40 +58,6 @@ interface Sample { n: number; p: Float64Array }
 // The ducks are drawn on ONE canvas. 200 SVG elements, each with its own animation and compositor layer, plus a React render of all of
 // them at every tick, dropped the frame rate to about 40 fps with frames of 80 to 170 ms exactly when a tick arrived (measured with
 // __tests__/stage/perf.mjs). A canvas draws 200 ducks in about a millisecond and nothing in React touches them between ticks.
-const DUCK_BODY = '10,60 30,40 70,38 100,50 95,75 60,88 25,84'
-const DUCK_HEAD = '70,40 72,18 88,8 102,16 104,36 92,46'
-const DUCK_BILL = '102,20 119,27 102,34'
-const SPRITE_PX = 3 // sprite resolution per design unit: sharp up to the largest duck on a 4K screen
-const sprites = new Map<string, HTMLCanvasElement>()
-const poly = (ctx: CanvasRenderingContext2D, pts: string) => {
-  const a = pts.split(' ').map((q) => q.split(',').map(Number))
-  ctx.beginPath()
-  ctx.moveTo(a[0][0], a[0][1])
-  for (let k = 1; k < a.length; k++) ctx.lineTo(a[k][0], a[k][1])
-  ctx.closePath()
-}
-/** One duck in its colour, drawn once into its own small canvas (the same polygons as MiniDuck, stroke 7). */
-function spriteOf(color: string): HTMLCanvasElement {
-  let c = sprites.get(color)
-  if (c) return c
-  c = document.createElement('canvas')
-  c.width = 120 * SPRITE_PX
-  c.height = 100 * SPRITE_PX
-  const ctx = c.getContext('2d')!
-  ctx.scale(SPRITE_PX, SPRITE_PX)
-  ctx.lineJoin = 'round'
-  ctx.strokeStyle = '#000'
-  ctx.lineWidth = 7
-  ctx.fillStyle = color
-  poly(ctx, DUCK_BODY); ctx.fill(); ctx.stroke()
-  poly(ctx, DUCK_HEAD); ctx.fill(); ctx.stroke()
-  ctx.fillStyle = '#FF9F1C'
-  ctx.lineWidth = 6
-  poly(ctx, DUCK_BILL); ctx.fill(); ctx.stroke()
-  sprites.set(color, c)
-  return c
-}
-
 function RaceLayer({ geo, ents, p, n, en, big, top3 }: { geo: TrackGeo; ents: GridEntrant[]; p: number[]; n: number; en: number[]; big: boolean; top3: { i: number; label: string }[] }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const tagEls = useRef(new Map<number, HTMLDivElement>())
@@ -209,6 +177,7 @@ export function StagePage({ code }: { code: string }) {
   const [qr, setQr] = useState('')
   const [armed, setArmed] = useState(false)
   const [photoGo, setPhotoGo] = useState(false)
+  const camRef = useRef<HTMLDivElement | null>(null)
   const joinUrl = `${APP_URL || (typeof window !== 'undefined' ? window.location.origin : '')}/join/${code}`
 
   useEffect(() => {
@@ -267,7 +236,6 @@ export function StagePage({ code }: { code: string }) {
   const lead = order[0]?.v ?? 0
   const lapNow = Math.min(room.track.laps, Math.floor(Math.min(lead / 10000, 1) * room.track.laps) + 1)
   const big = ents.length > 100 // a full room: smaller ducks on the grid and on the track so all 200 fit
-  const dense = big
   const finish = (() => {
     const s = pointAt(geo, geo.closed ? 0 : 0.96, 0)
     return { x: Math.round(s.x - 15), y: Math.round(s.y - 75), a: Math.round(Math.atan2(s.dy, s.dx) * 180 / Math.PI) }
@@ -333,30 +301,32 @@ export function StagePage({ code }: { code: string }) {
           </div>
         )}
 
-        {/* STARTING GRID */}
+        {/* STARTING GRID (MotoGP style; order = join order e.i) */}
         {phase === 'countdown' && grid && (
-          <div style={{ position: 'absolute', inset: 0, padding: '56px 120px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 26 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: 4, color: '#C9B8FF' }}>{code} · {trackName} · {lapsLabel}</div>
-                <div style={{ fontFamily: DISPLAY, fontSize: 96, color: '#FFC93C', textShadow: '0 8px 0 #836EF9' }}>STARTING GRID</div>
-              </div>
-              <div style={{ width: 160, height: 160, borderRadius: '50%', background: '#FFC93C', color: '#1E1446', border: '6px solid #000000', boxShadow: '0 10px 0 #000000', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', animation: 'dwPulse 1s ease-in-out infinite' }}>
-                <div style={{ fontSize: 18, fontWeight: 900 }}>GO IN</div>
-                <div style={{ fontFamily: DISPLAY, fontSize: 96, lineHeight: 0.9 }}>{countdown}</div>
-              </div>
+          <div style={{ position: 'absolute', inset: 0 }}>
+            <div style={{ position: 'absolute', left: 110, top: 44 }}>
+              <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: 4, color: '#C9B8FF' }}>{code} · {trackName} · {lapsLabel} · {ents.length} DUCKS</div>
+              <div style={{ fontFamily: DISPLAY, fontSize: 96, lineHeight: 1, color: '#FFC93C', textShadow: '0 8px 0 #836EF9' }}>STARTING GRID</div>
             </div>
-            <div style={{ position: 'relative', flex: 1, background: '#836EF9', border: '6px solid #000000', borderRadius: 40, boxShadow: '0 14px 0 #000000', padding: '20px 36px 16px 120px', overflow: 'hidden', animation: 'dwEnter .6s both' }}>
-              <div aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 84, background: 'repeating-conic-gradient(#ffffff 0 25%, #1E1446 0 50%) 0 0 / 42px 42px', borderRight: '6px solid #000000' }} />
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(20, minmax(0, 1fr))', columnGap: 6, rowGap: 2 }}>
-                {ents.map((e) => (
-                  <div key={e.i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <MiniDuck color={e.color} width={dense ? 40 : 58} style={{ height: dense ? 33 : 48, animation: `dwChip .4s cubic-bezier(.2,1.4,.4,1) ${((e.i % 20) * 0.03 + Math.floor(e.i / 20) * 0.05).toFixed(2)}s both, dwBob 1.2s ease-in-out ${((e.i % 20) * 0.06).toFixed(2)}s infinite` }} />
-                    <div style={{ padding: '0 6px', borderRadius: 999, fontSize: dense ? 11 : 13, fontWeight: 900, whiteSpace: 'nowrap', maxWidth: 76, overflow: 'hidden', textOverflow: 'ellipsis', color: '#1E1446', background: e.human ? '#ffffff' : 'transparent', border: e.human ? '3px solid #000000' : '0' }}>{e.human ? e.name : String(e.i + 1)}</div>
-                  </div>
-                ))}
-              </div>
+            <div style={{ position: 'absolute', right: 110, top: 34, width: 160, height: 160, borderRadius: '50%', background: '#FFC93C', color: '#1E1446', border: '6px solid #000000', boxShadow: '0 10px 0 #000000', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', animation: 'dwPulse 1s ease-in-out infinite' }}>
+              <div style={{ fontSize: 18, fontWeight: 900 }}>GO IN</div>
+              <div style={{ fontFamily: DISPLAY, fontSize: 96, lineHeight: 0.9 }}>{countdown}</div>
             </div>
+            {hasFlyover(ents.length) && (
+              <div style={{ position: 'absolute', right: 300, top: 92, padding: '10px 22px', background: '#ffffff', color: '#1E1446', border: '5px solid #000000', borderRadius: 999, boxShadow: '0 6px 0 #000000', fontSize: 26, fontWeight: 900 }}>CAMERA · ROWS 1–8 → BACK OF THE GRID</div>
+            )}
+            <div style={{ position: 'absolute', left: 60, top: 230, width: 1800, height: 660, background: '#2A1D5E', border: '6px solid #000000', borderRadius: 40, boxShadow: '0 14px 0 #000000', overflow: 'hidden' }}>
+              <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 26, background: 'repeating-linear-gradient(90deg, #F25F5C 0 60px, #ffffff 60px 120px)', borderBottom: '5px solid #000000' }} />
+              <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 26, background: 'repeating-linear-gradient(90deg, #ffffff 0 60px, #F25F5C 60px 120px)', borderTop: '5px solid #000000' }} />
+              <div aria-hidden style={{ position: 'absolute', left: 1630, top: 26, bottom: 26, width: 48, background: `${CHECKER} 0 0 / 24px 24px`, borderLeft: '5px solid #000000', borderRight: '5px solid #000000' }} />
+              <div aria-hidden style={{ position: 'absolute', left: 1700, top: 300, transform: 'rotate(90deg)', transformOrigin: 'left top', fontFamily: DISPLAY, fontSize: 34, color: '#FFC93C', whiteSpace: 'nowrap' }}>START</div>
+              <MotoGrid entrants={ents} countdown={countdown} total={grid.countdown} camRef={camRef} />
+            </div>
+            {hasFlyover(ents.length) && (
+              <div style={{ position: 'absolute', left: 110, right: 110, top: 926 }}>
+                <GridMinimap entrants={ents} camRef={camRef} />
+              </div>
+            )}
           </div>
         )}
 

@@ -8,3 +8,16 @@ export const APP_URL = process.env.NEXT_PUBLIC_APP_URL || ''
 export const txUrl = (hash?: string | null) => (hash ? `${EXPLORER_URL.replace(/\/$/, '')}/tx/${hash}` : '#')
 export const usdc = (v: string | number | bigint | null | undefined) => (Number(v || 0) / 1e6).toFixed(2)
 export const short = (a?: string | null) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : '')
+
+/** Contract addresses shown on the landing. Set per environment (testnet vs mainnet); a missing address hides its row. */
+export const CONTRACTS: { name: string; address: string }[] = [
+  { name: 'DuckWekRace', address: process.env.NEXT_PUBLIC_RACE_ADDRESS || '' },
+  { name: 'DuckWekVault', address: process.env.NEXT_PUBLIC_VAULT_ADDRESS || '' },
+  { name: 'PartNFT', address: process.env.NEXT_PUBLIC_PART_ADDRESS || '' },
+  { name: 'TrackNFT', address: process.env.NEXT_PUBLIC_TRACK_ADDRESS || '' },
+  { name: 'Badge', address: process.env.NEXT_PUBLIC_BADGE_ADDRESS || '' },
+  { name: 'USDC', address: process.env.NEXT_PUBLIC_USDC_ADDRESS || '' },
+].filter((c) => /^0x[0-9a-fA-F]{40}$/.test(c.address))
+
+export const CHAIN_LABEL = CHAIN_ID === 143 ? 'MONAD MAINNET · CHAIN 143' : CHAIN_ID === 10143 ? 'MONAD TESTNET · CHAIN 10143' : `CHAIN ${CHAIN_ID}`
+export const addressUrl = (a: string) => `${EXPLORER_URL.replace(/\/$/, '')}/address/${a}`

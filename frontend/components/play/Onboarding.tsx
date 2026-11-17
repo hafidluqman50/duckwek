@@ -20,7 +20,7 @@ export function Splash({ invite, onStart }: { invite: RoomState | null; onStart:
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, textAlign: 'center' }}>
         <div style={{ position: 'relative', width: 240, height: 150 }}>
           <div className="anim-bob" style={{ position: 'absolute', left: 0, top: 30, animationDuration: '1.1s' }}>
-            <DuckSvg template="sprint" bodyColor="#FFC93C" billColor="#FF9F1C" cosmetics={{ hat: true, shades: false, scarf: false }} partTypeId={1} width={150} />
+            <DuckSvg template="sprint" bodyColor="#FFC93C" billColor="#FF9F1C" cosmetics={{ hat: true, shades: false, scarf: false }} part={{ slot: 'tail', color: '#FF9F1C' }} width={150} />
           </div>
           <div className="anim-bob" style={{ position: 'absolute', right: 0, top: 0, animationDuration: '1.3s', animationDelay: '.3s' }}>
             <DuckSvg template="balanced" bodyColor="#4ED1C5" billColor="#FFC93C" cosmetics={{ hat: false, shades: true, scarf: false }} width={110} />

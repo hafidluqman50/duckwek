@@ -7,7 +7,8 @@ import type { Grid, RaceResult, RoomState, Settled, Tick } from './types'
 
 export type LivePhase = 'idle' | 'countdown' | 'race' | 'photo' | 'result'
 
-export interface Hatched { address: string; tokenId: string; tx: string; url: string | null; name: string }
+/** The egg of this wallet hatched after its first race. A moment in the UI only: nothing is minted (plan 0013 D2). */
+export interface Hatched { address: string }
 
 /** Everything a phone or the projector needs about one room, live over socket.io. */
 export function useRoomLive(code: string | null, opts: { photoMs?: number } = {}) {

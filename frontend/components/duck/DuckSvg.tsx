@@ -6,12 +6,25 @@ const BODY: Record<Template, string> = {
   tank: '42,74 52,48 96,46 126,62 122,92 84,102 46,98',
 }
 
+/** A part as drawn: the slot picks the shape, the part's own colour fills it (v2: no drawing by numeric type id, plan 0013 F4). */
+export interface PartArt {
+  slot: 'wings' | 'tail' | 'bill'
+  color: string
+}
+const registry = new Map<number, PartArt>()
+/** Remember the catalog's slot and colour per type id, for callers that only know the equipped type id. */
+export const registerParts = (parts: { typeId: number; slot: PartArt['slot']; color: string }[]): void => parts.forEach((p) => registry.set(p.typeId, { slot: p.slot, color: p.color }))
+
 export interface DuckSvgProps {
   template: Template
   bodyColor: string
   billColor: string
   cosmetics?: Cosmetics
   partTypeId?: number | null
+  part?: PartArt | null
+  /** The same part as plain fields, so a grid entrant can be spread straight onto the duck. */
+  partSlot?: PartArt['slot'] | null
+  partColor?: string | null
   width?: number | string
   flip?: boolean
   label?: string
@@ -19,20 +32,21 @@ export interface DuckSvgProps {
   style?: React.CSSProperties
 }
 
-/** The DuckWek duck (side view). Part 0 = Buroq Wings, 1 = Turbo Tail, 2 = Iron Bill. */
-export function DuckSvg({ template, bodyColor, billColor, cosmetics, partTypeId = null, width = 150, flip, label, className, style }: DuckSvgProps) {
+/** The DuckWek duck (side view). An equipped part is drawn by its slot (wings, tail or bill) in its own colour. */
+export function DuckSvg({ template, bodyColor, billColor, cosmetics, partTypeId = null, part = null, partSlot = null, partColor = null, width = 150, flip, label, className, style }: DuckSvgProps) {
   const c = cosmetics || { hat: false, shades: false, scarf: false }
+  const art = part ?? (partSlot && partColor ? { slot: partSlot, color: partColor } : partTypeId !== null ? registry.get(partTypeId) ?? null : null)
   return (
     <svg viewBox="0 0 150 105" width={width} className={className} style={{ display: 'block', overflow: 'visible', transform: flip ? 'scaleX(-1)' : undefined, ...style }} role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
-      {partTypeId === 1 && <polygon points="36,64 6,52 16,72 6,92 38,84" fill="#FF9F1C" stroke="#000" strokeWidth="4" strokeLinejoin="round" />}
+      {art?.slot === 'tail' && <polygon points="36,64 6,52 16,72 6,92 38,84" fill={art.color} stroke="#000" strokeWidth="4" strokeLinejoin="round" />}
       <polygon points={BODY[template] || BODY.balanced} fill={bodyColor} stroke="#000" strokeWidth="5" strokeLinejoin="round" />
       <polygon points="52,60 90,56 72,72" fill="#fff" opacity="0.3" />
-      {partTypeId === 0 && <polygon points="58,66 98,34 110,40 90,74" fill="#fff" stroke="#000" strokeWidth="4" strokeLinejoin="round" />}
+      {art?.slot === 'wings' && <polygon points="58,66 98,34 110,40 90,74" fill={art.color} stroke="#000" strokeWidth="4" strokeLinejoin="round" />}
       {c.scarf && <polygon points="86,52 116,54 114,62 84,58" fill="#F25F5C" stroke="#000" strokeWidth="3" strokeLinejoin="round" />}
       <polygon points="88,52 90,30 106,20 120,28 122,48 110,58" fill={bodyColor} stroke="#000" strokeWidth="5" strokeLinejoin="round" />
       {c.scarf && <polygon points="90,58 84,78 94,78 97,60" fill="#F25F5C" stroke="#000" strokeWidth="3" strokeLinejoin="round" />}
-      {partTypeId === 2 ? (
-        <polygon points="118,30 147,39 118,48" fill="#9AA3B8" stroke="#000" strokeWidth="4" strokeLinejoin="round" />
+      {art?.slot === 'bill' ? (
+        <polygon points="118,30 147,39 118,48" fill={art.color} stroke="#000" strokeWidth="4" strokeLinejoin="round" />
       ) : (
         <polygon points="120,32 140,39 120,46" fill={billColor} stroke="#000" strokeWidth="4" strokeLinejoin="round" />
       )}

@@ -26,7 +26,7 @@ export function Home({ duck, onOpenDuck, onJoinCode, onHost }: { duck: Duck; onO
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, lineHeight: 1 }}>{duck.name}</div>
           <div style={{ fontSize: 12, fontWeight: 800 }}>{TEMPLATES[duck.template].name} · {duck.races ? `${duck.races} race${duck.races > 1 ? 's' : ''}` : 'no races yet'}</div>
           <div style={{ alignSelf: 'flex-start', padding: '2px 8px', borderRadius: 8, fontSize: 11, fontWeight: 900, background: duck.status === 'hatched' ? '#B8F35A' : '#E6E0FF' }}>
-            {duck.status === 'hatched' ? `DUCK NFT #${duck.tokenId}` : duck.status === 'hatching' ? 'HATCHING…' : 'EGG · hatches into an NFT after your first race'}
+            {duck.status === 'hatched' ? 'HATCHED' : 'EGG · hatches after your first race'}
           </div>
         </div>
       </button>
@@ -74,7 +74,7 @@ export function MyDuck({ draft, onChange, onGarage }: { draft: Draft; onChange: 
         </div>
         <div style={{ position: 'absolute', left: 12, top: 10, display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
           <span style={{ padding: '3px 10px', borderRadius: 999, background: '#FFC93C', border: '3px solid #000', color: '#1E1446', fontFamily: 'var(--font-display)', fontSize: 18 }}>{draft.name}</span>
-          <span style={{ padding: '2px 8px', borderRadius: 8, fontSize: 10, fontWeight: 900, color: '#1E1446', background: duck?.status === 'hatched' ? '#B8F35A' : '#E6E0FF' }}>{duck?.status === 'hatched' ? `DUCK NFT #${duck.tokenId}` : 'EGG · NFT after 1st race'}</span>
+          <span style={{ padding: '2px 8px', borderRadius: 8, fontSize: 10, fontWeight: 900, color: '#1E1446', background: duck?.status === 'hatched' ? '#B8F35A' : '#E6E0FF' }}>{duck?.status === 'hatched' ? 'HATCHED' : 'EGG · hatches after 1st race'}</span>
         </div>
         <div style={{ position: 'absolute', right: 12, top: 10, fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 800, color: '#C9B8FF', textAlign: 'right', whiteSpace: 'pre-line' }}>{`SPD ${st[0]}\nWGT ${st[1]}\nBST ${st[2]}`}</div>
         <span style={{ position: 'absolute', left: 12, bottom: 8, padding: '3px 10px', borderRadius: 999, background: '#fff', border: '3px solid #000', color: '#1E1446', fontSize: 12, fontWeight: 900 }}>Equipped · {eqPart ? eqPart.name : 'no part'}</span>
@@ -82,9 +82,8 @@ export function MyDuck({ draft, onChange, onGarage }: { draft: Draft; onChange: 
       <Card style={{ flex: 'none', padding: '7px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
         <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 2, color: '#5B4AB8' }}>COLLECTIBLES</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 900 }}>
-          <span style={{ flex: 1 }}>{duck?.tokenId ? `Duck NFT #${duck.tokenId}` : duck?.status === 'hatching' ? 'Duck NFT · minting…' : 'Duck NFT · egg'}</span>
-          {duck?.hatchTx && <a href={txUrl(duck.hatchTx)} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 800, color: '#5B4AB8' }}>tx ↗</a>}
-          {!duck?.tokenId && !duck?.hatchTx && <span style={{ fontSize: 10, fontWeight: 700, color: '#5B4AB8' }}>after 1st paid race</span>}
+          <span style={{ flex: 1 }}>Part licenses · {me?.licenses?.length ?? me?.parts.length ?? 0}</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#5B4AB8' }}>one per part, yours to keep</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800 }}>
           <span style={{ flex: 1 }}>Titles · {me?.titles.length ?? 0}</span>
@@ -109,7 +108,7 @@ export function MyDuck({ draft, onChange, onGarage }: { draft: Draft; onChange: 
               return (
                 <div key={p.typeId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: on ? '#FFC93C' : '#fff', color: '#1E1446', border: '4px solid #000', borderRadius: 16, boxShadow: `0 ${on ? 5 : 2}px 0 #000` }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ fontFamily: 'var(--font-display)', fontSize: 18 }}>{p.name}</span><span style={{ padding: '1px 6px', border: '2px solid #000', borderRadius: 999, fontSize: 10, fontWeight: 900 }}>{p.rarity}</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ fontFamily: 'var(--font-display)', fontSize: 18 }}>{p.name}</span><span style={{ padding: '1px 6px', border: '2px solid #000', borderRadius: 999, fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>{p.slot}</span></div>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 800 }}>{fx(p)}</div>
                     <div style={{ fontSize: 11, fontWeight: 800, color: '#5B4AB8' }}>{fitLine(p, tracks)}</div>
                   </div>
@@ -186,7 +185,7 @@ function Swatches({ title, list, value, pick }: { title: string; list: [string, 
   )
 }
 
-export function Garage({ draft, onEquip, onBuy, fromLobby, onBack, busy }: { draft: Draft; onEquip: (typeId: number) => void; onBuy: (p: Part) => void; fromLobby: boolean; onBack: () => void; busy: boolean }) {
+export function Garage({ draft, onEquip, onBuy, busy }: { draft: Draft; onEquip: (typeId: number) => void; onBuy: (p: Part) => void; busy: boolean }) {
   const { me, parts, tracks } = useSession()
   return (
     <div className="anim-enter" style={{ position: 'absolute', inset: 0, padding: '12px 16px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -203,7 +202,7 @@ export function Garage({ draft, onEquip, onBuy, fromLobby, onBack, busy }: { dra
                 <DuckSvg template="balanced" bodyColor={draft.bodyColor} billColor={draft.billColor} partTypeId={p.typeId} width={64} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ fontFamily: 'var(--font-display)', fontSize: 19 }}>{p.name}</span><span style={{ padding: '1px 6px', border: '2px solid #000', borderRadius: 999, fontSize: 10, fontWeight: 900 }}>{p.rarity}</span></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ fontFamily: 'var(--font-display)', fontSize: 19 }}>{p.name}</span><span style={{ padding: '1px 6px', border: '2px solid #000', borderRadius: 999, fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>{p.slot}</span></div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 800 }}>{fx(p)}</div>
                 <div style={{ fontSize: 11, fontWeight: 800, color: '#5B4AB8' }}>{fitLine(p, tracks)}</div>
               </div>
@@ -221,7 +220,6 @@ export function Garage({ draft, onEquip, onBuy, fromLobby, onBack, busy }: { dra
         </div>
       </div>
       <div style={{ flex: 1 }} />
-      {fromLobby && <Btn tone="white" h={54} size={17} shadow={false} onClick={onBack}>Back to lobby</Btn>}
     </div>
   )
 }
@@ -230,7 +228,7 @@ export function CreateRoom({ onCreate, busy }: { onCreate: (f: { name: string; t
   const { tracks } = useSession()
   const active = tracks.filter((t) => t.status === 'active' && t.id !== null)
   const [name, setName] = useState('GIK UGM Main Stage')
-  const [trackId, setTrackId] = useState<number>(active.find((t) => t.slug === 'alpine-ring')?.id ?? active[0]?.id ?? 2)
+  const [trackId, setTrackId] = useState<number>(active.find((t) => t.slug === 'merapi-ring')?.id ?? active[0]?.id ?? 2)
   const [slots, setSlots] = useState(50)
   const [bots, setBots] = useState(true)
   const sel = active.find((t) => t.id === trackId)

@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useWide } from '@/lib/useWide'
 import { useSession } from '@/contexts/SessionContext'
 import { sound } from '@/lib/sound'
 import { short, txUrl, usdc } from '@/lib/config'
@@ -49,15 +50,16 @@ export function BackButton({ onBack, dark }: { onBack: () => void; dark?: boolea
 }
 
 /** `onBack` is absent on the root screens and while a race is running. */
-export function Header({ dark, onWallet, onBack }: { dark?: boolean; onWallet: () => void; onBack?: () => void }) {
+export function Header({ dark, onWallet, onBack, wide, roomCode }: { dark?: boolean; onWallet: () => void; onBack?: () => void; wide?: boolean; roomCode?: string | null }) {
   const { me } = useSession()
   return (
-    <div style={{ flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px 0' }}>
+    <div style={wide ? { flex: 'none', gridColumn: '1 / -1', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', background: '#1E1446', borderBottom: '4px solid #000' } : { flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px 0' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         {onBack && <BackButton onBack={onBack} dark={dark} />}
         <div className="stroke-sm" style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: '#FFC93C' }}>DUCKWEK</div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: wide ? 10 : 8 }}>
+        {wide && roomCode && <span style={{ padding: '6px 14px', border: '3px solid #000', borderRadius: 999, background: '#FFC93C', color: '#1E1446', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{roomCode}</span>}
         <SoundButton dark={dark} />
         {me && (
           <button type="button" className="dw-btn" onClick={onWallet} aria-label="Open wallet" style={{ height: 40, display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px 0 6px', background: '#1E1446', color: '#fff', border: '3px solid #000', borderRadius: 999, boxShadow: '0 4px 0 #000' }}>
@@ -82,10 +84,11 @@ export function Toast() {
 
 export function SignSheet() {
   const { sheet, confirmSheet, cancelSheet } = useSession()
+  const wide = useWide()
   if (!sheet) return null
   return (
-    <div className="anim-fade" style={{ position: 'absolute', inset: 0, zIndex: 90, background: 'rgba(0,0,0,0.55)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-      <div role="dialog" aria-label="Signature request" className="anim-sheet" style={{ background: '#15102E', color: '#fff', borderTop: '4px solid #000', borderRadius: '26px 26px 0 0', padding: '18px 18px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="anim-fade" style={{ position: 'absolute', inset: 0, zIndex: 90, background: 'rgba(0,0,0,0.55)', display: 'flex', flexDirection: 'column', justifyContent: wide ? 'center' : 'flex-end', alignItems: wide ? 'center' : 'stretch' }}>
+      <div role="dialog" aria-label="Signature request" className="anim-sheet" style={{ background: '#15102E', color: '#fff', ...(wide ? { border: '4px solid #000', borderRadius: 26, width: 440, maxWidth: '90vw' } : { borderTop: '4px solid #000', borderRadius: '26px 26px 0 0' }), padding: '18px 18px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ width: 34, height: 34, borderRadius: 10, border: '3px solid #000', background: '#FFC93C', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1E1446', fontWeight: 900 }}>{sheet.walletLabel.charAt(0)}</span>
           <div style={{ flex: 1 }}>
@@ -122,10 +125,11 @@ export function SignSheet() {
 
 export function WalletSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { me, signerLabel, withdraw, signOut } = useSession()
+  const wide = useWide()
   if (!open || !me) return null
   return (
-    <div className="anim-fade" style={{ position: 'absolute', inset: 0, zIndex: 85, background: 'rgba(0,0,0,0.55)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }} onClick={onClose}>
-      <div role="dialog" aria-label="Your wallet" className="anim-sheet" onClick={(e) => e.stopPropagation()} style={{ background: '#fff', color: '#1E1446', borderTop: '4px solid #000', borderRadius: '26px 26px 0 0', padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div className="anim-fade" style={{ position: 'absolute', inset: 0, zIndex: 85, background: 'rgba(0,0,0,0.55)', display: 'flex', flexDirection: 'column', justifyContent: wide ? 'center' : 'flex-end', alignItems: wide ? 'center' : 'stretch' }} onClick={onClose}>
+      <div role="dialog" aria-label="Your wallet" className="anim-sheet" onClick={(e) => e.stopPropagation()} style={{ background: '#fff', color: '#1E1446', ...(wide ? { border: '4px solid #000', borderRadius: 26, width: 440, maxWidth: '90vw' } : { borderTop: '4px solid #000', borderRadius: '26px 26px 0 0' }), padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 2, color: '#5B4AB8' }}>{(signerLabel || 'WALLET').toUpperCase()} · MONAD</div>
           <button type="button" onClick={onClose} aria-label="Close" style={{ width: 36, height: 36, border: '3px solid #000', borderRadius: '50%', background: '#fff', fontSize: 18, fontWeight: 900 }}>×</button>
@@ -165,19 +169,21 @@ export function WalletSheet({ open, onClose }: { open: boolean; onClose: () => v
   )
 }
 
-export function BottomNav({ cur, go }: { cur: 'home' | 'myduck' | 'garage'; go: (s: 'home' | 'myduck' | 'garage') => void }) {
+export function BottomNav({ cur, go, side, locked }: { cur: 'home' | 'myduck' | 'garage' | null; go: (s: 'home' | 'myduck' | 'garage') => void; side?: boolean; locked?: boolean }) {
   const items: [string, string, 'home' | 'myduck' | 'garage'][] = [['Home', 'rooms', 'home'], ['My Duck', 'parts & look', 'myduck'], ['Garage', 'shop', 'garage']]
   return (
-    <nav aria-label="Main" style={{ flex: 'none', display: 'flex', gap: 6, padding: '8px 12px 14px', background: '#1E1446', borderTop: '4px solid #000' }}>
+    <nav aria-label="Main" style={side ? { display: 'flex', flexDirection: 'column', gap: 10, padding: '20px 16px', background: '#1E1446', borderRight: '4px solid #000', boxSizing: 'border-box' } : { flex: 'none', display: 'flex', gap: 6, padding: '8px 12px 14px', background: '#1E1446', borderTop: '4px solid #000' }}>
       {items.map(([label, sub, id]) => {
         const on = cur === id
         return (
-          <button key={id} type="button" className="dw-btn" onClick={() => go(id)} aria-current={on ? 'page' : undefined} style={{ flex: 1, height: 52, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, background: on ? '#FFC93C' : '#2A1D5E', color: on ? '#1E1446' : '#fff', border: '3px solid #000', borderRadius: 14 }}>
-            <span style={{ fontSize: 15, fontWeight: 900, lineHeight: 1 }}>{label}</span>
-            <span style={{ fontSize: 10, fontWeight: 800, lineHeight: 1, opacity: 0.8 }}>{sub}</span>
+          <button key={id} type="button" className="dw-btn" disabled={locked} onClick={() => go(id)} aria-current={on ? 'page' : undefined} style={side ? { height: 64, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', padding: '0 16px', gap: 2, background: on ? '#FFC93C' : '#2A1D5E', color: on ? '#1E1446' : '#fff', border: '3px solid #000', borderRadius: 16, boxShadow: on ? '0 4px 0 #000' : 'none' } : { flex: 1, height: 52, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, background: on ? '#FFC93C' : '#2A1D5E', color: on ? '#1E1446' : '#fff', border: '3px solid #000', borderRadius: 14 }}>
+            <span style={{ fontSize: side ? 17 : 15, fontWeight: 900, lineHeight: 1 }}>{label}</span>
+            <span style={{ fontSize: side ? 12 : 10, fontWeight: 800, lineHeight: 1, opacity: 0.8 }}>{sub}</span>
           </button>
         )
       })}
+      {side && <div style={{ flex: 1 }} />}
+      {side && locked && <div style={{ fontSize: 12, fontWeight: 800, color: '#C9B8FF', lineHeight: 1.4 }}>Nav is locked while a race runs.</div>}
     </nav>
   )
 }

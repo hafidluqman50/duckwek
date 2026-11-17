@@ -7,6 +7,9 @@ export interface DuckLook {
   billColor: string
   cosmetics: Cosmetics
   partTypeId: number | null
+  /** The part as drawn: its slot and its own colour, sent with the grid so the stage needs no catalog. */
+  partSlot?: 'wings' | 'tail' | 'bill' | null
+  partColor?: string | null
 }
 
 export interface Duck extends Omit<DuckLook, 'partTypeId'> {
@@ -15,9 +18,7 @@ export interface Duck extends Omit<DuckLook, 'partTypeId'> {
   races: number
   titles: number
   bestRank: number | null
-  status: 'egg' | 'hatching' | 'hatched' | 'failed'
-  tokenId: string | null
-  hatchTx: string | null
+  status: 'egg' | 'hatched'
 }
 
 export interface Me {
@@ -26,6 +27,7 @@ export interface Me {
   usdc: string
   earnings: string
   parts: number[]
+  licenses?: { typeId: number; tokenId: string; tx: string }[]
   titles: { title: string; rank: number; room: string; raceId: string; tx: string | null }[]
   activity: { kind: string; amount: string; status: string; tx: string | null; room: string | null; label: string }[]
 }
@@ -40,6 +42,8 @@ export interface Track {
   turns: number
   lengthM: number
   closed: boolean
+  layoutVersion?: number
+  holder?: string | null
   path: number[][]
   sectors: number[]
   profile: { speed: number; weight: number; boost: number; lapTicks: number }
@@ -50,11 +54,13 @@ export interface Track {
 export interface Part {
   typeId: number
   name: string
-  rarity: string
   slot: 'wings' | 'tail' | 'bill'
   speed: number
   weight: number
   boost: number
+  color: string // the part's own fill colour, #RRGGBB (an on-chain trait)
+  stats: Record<string, number>
+  creator: string
   price: string
   platform: boolean
   status: string
@@ -102,11 +108,11 @@ export const TEMPLATES: Record<Template, { name: string; tag: string; st: [numbe
 }
 export const BODY_COLORS: [string, string][] = [['#FFC93C', 'Duck yellow'], ['#FFFFFF', 'White'], ['#FF7AB6', 'Pink'], ['#4ED1C5', 'Teal'], ['#7CC6FE', 'Sky'], ['#B8F35A', 'Lime'], ['#FF9F1C', 'Orange'], ['#C9B8FF', 'Lilac'], ['#F25F5C', 'Red'], ['#836EF9', 'Monad purple'], ['#2B2B2B', 'Black'], ['#9BE7FF', 'Ice']]
 export const BILL_COLORS: [string, string][] = [['#FF9F1C', 'Orange'], ['#FFC93C', 'Yellow'], ['#FF7AB6', 'Pink'], ['#1E1446', 'Ink']]
-const PRE = ['Quack', 'Buroq', 'Wek', 'Paddle', 'Monad', 'Bebek', 'Mallard', 'Splash', 'Feather', 'Bill', 'Tiki', 'Jogja', 'Gudeg', 'Merapi']
+const PRE = ['Quack', 'Kite', 'Wek', 'Paddle', 'Monad', 'Bebek', 'Mallard', 'Splash', 'Feather', 'Bill', 'Tiki', 'Jogja', 'Gudeg', 'Merapi']
 const SUF = ['Jr', 'King', 'Queen', 'Bro', 'Max', 'X', '77', 'Boy', 'Gang', 'Pro', 'Zz', 'One']
 const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)]
 export const randomName = () => pick(PRE) + pick(SUF)
-export const randomDuck = (): Omit<Duck, 'races' | 'titles' | 'bestRank' | 'status' | 'tokenId' | 'hatchTx'> => ({
+export const randomDuck = (): Omit<Duck, 'races' | 'titles' | 'bestRank' | 'status'> => ({
   name: randomName(),
   template: pick<Template>(['balanced', 'sprint', 'tank']),
   bodyColor: pick(BODY_COLORS)[0],

@@ -69,3 +69,9 @@ input { font-family: inherit; }
 .water { background: repeating-linear-gradient(90deg, #836EF9 0 40px, #9D8CFB 40px 80px); animation: dwWater 2.4s linear infinite; }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+
+/* Landing only */
+@keyframes dwRun { 0% { transform: translateX(0) } 100% { transform: translateX(56px) } }
+.stk { -webkit-text-stroke: 8px #000; paint-order: stroke fill; }
+.stk-s { -webkit-text-stroke: 5px #000; paint-order: stroke fill; }
+@media (max-width: 639px) { .stk { -webkit-text-stroke: 6px #000; } }

@@ -1,43 +1,45 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useSession } from '@/contexts/SessionContext'
 import { useRoomLive } from '@/lib/useRoomLive'
 import { saveDuck } from '@/http/profile/profileApi'
-import { setLoadout, startRace } from '@/http/rooms/roomsApi'
+import { startRace } from '@/http/rooms/roomsApi'
 import { sound } from '@/lib/sound'
 import { randomDuck, type Duck } from '@/lib/types'
 import { Header, Toast, SignSheet, WalletSheet, BottomNav } from '@/components/play/Shell'
 import { Splash, Connect, JoinTicket, Hatch } from '@/components/play/Onboarding'
 import { Home, MyDuck, Garage, CreateRoom, Hosted } from '@/components/play/Profile'
-import { Lobby, Countdown, RaceView, PhotoFinish, Result } from '@/components/play/RaceScreens'
+import { Lobby, Countdown, RaceView, RacePanel, PhotoFinish, Result } from '@/components/play/RaceScreens'
+import { GridSlot } from '@/components/play/GridSlot'
 import { Dots } from '@/components/ui/kit'
+import { useWide } from '@/lib/useWide'
 
 type Screen = 'splash' | 'connect' | 'join' | 'hatch' | 'home' | 'myduck' | 'garage' | 'create' | 'hosted' | 'lobby'
 type Draft = Pick<Duck, 'name' | 'template' | 'bodyColor' | 'billColor' | 'cosmetics' | 'equippedPartTypeId'>
 
 const draftOf = (d: Duck | null | undefined): Draft => (d ? { name: d.name, template: d.template, bodyColor: d.bodyColor, billColor: d.billColor, cosmetics: d.cosmetics, equippedPartTypeId: d.equippedPartTypeId } : randomDuck())
 
-export function PlayPage() {
-  const router = useRouter()
+/** `entry='create'` is the /play/create entry: after login (and hatching a first duck) go straight to the create-room screen. */
+export function PlayPage({ entry }: { entry?: 'create' } = {}) {
   const params = useSearchParams()
   const invite = params.get('room')?.toUpperCase() || null
   const session = useSession()
+  const wide = useWide()
   const { ready, me, pay, refresh, say, tracks } = session
   const [screen, setScreen] = useState<Screen>('splash')
   const [code, setCode] = useState<string | null>(invite)
   const [draft, setDraft] = useState<Draft>(() => randomDuck())
   const [busy, setBusy] = useState(false)
   const [walletOpen, setWalletOpen] = useState(false)
-  const [garageFromLobby, setGarageFromLobby] = useState(false)
-  const [loadout, setLoadoutState] = useState<number | null>(null)
   const [starting, setStarting] = useState(false)
   const live = useRoomLive(code)
   const room = live.room
   const routed = useRef(false)
   const saveT = useRef<ReturnType<typeof setTimeout> | null>(null)
   const address = me?.address || ''
+  const afterLogin: Screen = entry === 'create' && !invite ? 'create' : 'home'
   const inRoom = !!room && !!address && room.players.some((p) => p.address === address)
 
   // First routing once the session is known
@@ -47,31 +49,32 @@ export function PlayPage() {
     if (invite && room === null && !live.error) return // wait for the room
     routed.current = true
     setDraft(draftOf(me.duck))
-    setLoadoutState(me.duck?.equippedPartTypeId ?? null)
     if (invite && room) setScreen(inRoom ? (me.duck ? 'lobby' : 'hatch') : 'join')
-    else setScreen(me.duck ? 'home' : 'hatch')
-  }, [ready, me, invite, room, inRoom, live.error])
+    else setScreen(me.duck ? afterLogin : 'hatch')
+  }, [ready, me, invite, room, inRoom, live.error, afterLogin])
 
   // After connecting (sign-in finished) continue the flow
   useEffect(() => {
     if (screen === 'connect' && me) {
       routed.current = true
       setDraft(draftOf(me.duck))
-      setLoadoutState(me.duck?.equippedPartTypeId ?? null)
       if (code && room) setScreen(inRoom ? (me.duck ? 'lobby' : 'hatch') : 'join')
-      else setScreen(me.duck ? 'home' : 'hatch')
+      else setScreen(me.duck ? afterLogin : 'hatch')
     }
     if (me === null && ready && routed.current) {
       routed.current = false
       setScreen('splash')
     }
-  }, [me, screen, code, room, inRoom, ready])
+  }, [me, screen, code, room, inRoom, ready, afterLogin])
 
   // Keep the URL shareable
   useEffect(() => {
-    const want = code && ['join', 'lobby', 'hatch', 'hosted'].includes(screen) ? `/play?room=${code}` : '/play'
-    if (typeof window !== 'undefined' && window.location.pathname + window.location.search !== want) router.replace(want, { scroll: false })
-  }, [code, screen, router])
+    // /play/create stays in the address bar until the player leaves the create flow; history.replaceState
+    // syncs with the Next router (docs: linking-and-navigating) and keeps this component mounted across the two routes.
+    const keepCreate = entry === 'create' && !code && ['splash', 'connect', 'hatch', 'create'].includes(screen)
+    const want = code && ['join', 'lobby', 'hatch', 'hosted'].includes(screen) ? `/play?room=${code}` : keepCreate ? '/play/create' : '/play'
+    if (typeof window !== 'undefined' && window.location.pathname + window.location.search !== want) window.history.replaceState(null, '', want)
+  }, [code, screen, entry])
 
   // Sound: music per screen, stings per phase
   const phase = live.phase
@@ -119,7 +122,7 @@ export function PlayPage() {
       sound.play('quack')
       await refresh()
       say(`${draft.name} is ready to race`)
-      setScreen(code && room ? 'lobby' : 'home')
+      setScreen(code && room ? 'lobby' : afterLogin)
     } catch (e) {
       say((e as Error).message)
     } finally {
@@ -161,10 +164,6 @@ export function PlayPage() {
         sound.play('sparkle')
         const m = await refresh()
         if (m?.duck) setDraft(draftOf(m.duck))
-        if (garageFromLobby) {
-          setLoadoutState(typeId)
-          if (code) setLoadout(code, typeId).catch(() => undefined)
-        }
         say(r.equipped ? 'Part equipped on your duck' : 'Part is yours · find it in My Duck')
       }
     } catch {
@@ -187,11 +186,6 @@ export function PlayPage() {
     } finally {
       setBusy(false)
     }
-  }
-
-  const changeLoadout = (p: number | null) => {
-    setLoadoutState(p)
-    if (code) setLoadout(code, p).catch((e) => say(e.message))
   }
 
   const start = async () => {
@@ -217,15 +211,18 @@ export function PlayPage() {
     if (screen === 'connect') onBack = () => setScreen('splash')
     else if (screen === 'join' || screen === 'hatch' || screen === 'hosted' || screen === 'lobby') onBack = () => leaveRoom(homeOrSplash)
     else if (screen === 'myduck' || screen === 'create') onBack = () => setScreen('home')
-    else if (screen === 'garage') onBack = () => setScreen(garageFromLobby ? 'lobby' : 'myduck')
+    else if (screen === 'garage') onBack = () => setScreen('myduck')
   }
 
-  const navScreen = !racing && me?.duck && (screen === 'home' || screen === 'myduck' || (screen === 'garage' && !garageFromLobby)) ? (screen as 'home' | 'myduck' | 'garage') : null
+  const navScreen = !racing && me?.duck && (screen === 'home' || screen === 'myduck' || screen === 'garage') ? (screen as 'home' | 'myduck' | 'garage') : null
 
   let body: React.ReactNode = null
   if (!ready) body = <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Dots /></div>
-  else if (racing && live.grid && phase === 'countdown') body = <Countdown n={live.countdown} track={room!.track.name} laps={room!.track.laps} name={draft.name} />
-  else if (racing && live.grid && phase === 'race') body = <RaceView room={room!} grid={live.grid} tick={live.tick} me={address} gap={live.blockGap} />
+  else if (racing && live.grid && phase === 'countdown') {
+    const myIdx = live.grid.entrants.findIndex((e) => e.address === address)
+    body = myIdx >= 0 ? <GridSlot entrants={live.grid.entrants} myIndex={myIdx} countdown={live.countdown} code={room!.code} /> : <Countdown n={live.countdown} track={room!.track.name} laps={room!.track.laps} name={draft.name} />
+  }
+  else if (racing && live.grid && phase === 'race') body = <RaceView room={room!} grid={live.grid} tick={live.tick} me={address} gap={live.blockGap} wide={wide} />
   else if (racing && phase === 'photo') body = <PhotoFinish />
   else if (racing && phase === 'result' && live.result) body = <Result result={live.result} settled={live.settled} hatched={live.hatched} me={address} duckName={me?.duck?.name || draft.name} trackName={room!.track.name} onHome={() => { live.reset(); leaveRoom('home') }} onNewRoom={() => { live.reset(); leaveRoom('create') }} />
   else if (screen === 'splash') body = <Splash invite={invite ? room : null} onStart={() => setScreen('connect')} />
@@ -234,19 +231,39 @@ export function PlayPage() {
   else if (screen === 'join' && live.error) body = <Missing text={live.error} onBack={() => { setCode(null); setScreen(me?.duck ? 'home' : 'hatch') }} />
   else if (screen === 'hatch') body = <Hatch draft={draft} setDraft={setDraft} onShuffle={() => { setDraft(randomDuck()); sound.play('shuffle') }} onKeep={keepDuck} inRoom={!!(code && inRoom)} roomCode={code} busy={busy} />
   else if (screen === 'home' && me?.duck) body = <Home duck={me.duck} onOpenDuck={() => setScreen('myduck')} onJoinCode={openCode} onHost={() => setScreen('create')} />
-  else if (screen === 'myduck') body = <MyDuck draft={draft} onChange={updateDraft} onGarage={() => { setGarageFromLobby(false); setScreen('garage') }} />
-  else if (screen === 'garage') body = <Garage draft={draft} busy={busy} fromLobby={garageFromLobby} onBack={() => setScreen('lobby')} onBuy={(p) => buyPart(p.typeId)} onEquip={(id) => { updateDraft({ ...draft, equippedPartTypeId: id }); if (garageFromLobby) changeLoadout(id); say('Equipped') }} />
+  else if (screen === 'myduck') body = <MyDuck draft={draft} onChange={updateDraft} onGarage={() => setScreen('garage')} />
+  else if (screen === 'garage') body = <Garage draft={draft} busy={busy} onBuy={(p) => buyPart(p.typeId)} onEquip={(id) => { updateDraft({ ...draft, equippedPartTypeId: id }); say('Equipped for your next room') }} />
   else if (screen === 'create') body = tracks.length ? <CreateRoom busy={busy} onCreate={createRoom} /> : <Dots />
   else if (screen === 'hosted' && room) body = <Hosted code={room.code} name={room.name} summary={`${room.track.name} · ${room.maxDucks} ducks · bots ${room.fillBots ? 'on' : 'off'}`} onLobby={() => setScreen('lobby')} />
-  else if (screen === 'lobby' && room) body = <Lobby room={room} me={address} loadout={loadout} onLoadout={changeLoadout} onGarage={() => { setGarageFromLobby(true); setScreen('garage') }} onStart={start} starting={starting} />
+  else if (screen === 'lobby' && room) body = <Lobby room={room} me={address} onStart={start} starting={starting} />
   else body = <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Dots /></div>
+
+  const showSide = wide && !!me?.duck && !['splash', 'connect'].includes(screen)
+  const racePanel = wide && racing && !!live.grid && (phase === 'race' || phase === 'photo')
+  const cols = [showSide ? '240px' : '', 'minmax(0, 1fr)', racePanel ? '400px' : ''].filter(Boolean).join(' ')
+
+  if (wide) {
+    return (
+      <main onPointerDown={() => sound.unlock()} style={{ position: 'relative', height: '100dvh', display: 'grid', gridTemplateColumns: cols, gridTemplateRows: '72px minmax(0, 1fr)', background: '#120B2E', color: '#fff', overflow: 'hidden' }}>
+        <Header dark onWallet={() => setWalletOpen(true)} onBack={onBack} wide roomCode={room?.code ?? code} />
+        {showSide && <BottomNav side locked={racing} cur={navScreen} go={(sc) => setScreen(sc)} />}
+        <div style={{ position: 'relative', minWidth: 0, minHeight: 0, display: 'flex', justifyContent: 'center', background: dark ? '#1E1446' : '#836EF9', color: dark ? '#fff' : '#1E1446' }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: racing && phase === 'race' ? 'none' : 640, height: '100%' }}>{body}</div>
+        </div>
+        {racePanel && live.grid && <RacePanel grid={live.grid} tick={live.tick} me={address} />}
+        <Toast />
+        <SignSheet />
+        <WalletSheet open={walletOpen} onClose={() => setWalletOpen(false)} />
+      </main>
+    )
+  }
 
   return (
     <main style={{ minHeight: '100dvh', display: 'flex', justifyContent: 'center', background: '#120B2E' }}>
       <div onPointerDown={() => sound.unlock()} style={{ position: 'relative', width: '100%', maxWidth: 440, height: '100dvh', maxHeight: 932, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: dark ? '#1E1446' : '#836EF9', color: dark ? '#fff' : '#1E1446' }}>
         <Header dark={dark} onWallet={() => setWalletOpen(true)} onBack={onBack} />
         <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>{body}</div>
-        {navScreen && <BottomNav cur={navScreen} go={(s) => { setGarageFromLobby(false); setScreen(s) }} />}
+        {navScreen && <BottomNav cur={navScreen} go={(s) => setScreen(s)} />}
         <Toast />
         <SignSheet />
         <WalletSheet open={walletOpen} onClose={() => setWalletOpen(false)} />

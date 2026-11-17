@@ -1,24 +1,24 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSession } from '@/contexts/SessionContext'
 import { DuckSvg, MiniDuck } from '@/components/duck/DuckSvg'
 import { Btn, Card, Pill } from '@/components/ui/kit'
 import { buildTrack, pointAt, uOf } from '@/lib/track'
-import { dots, statsOf, titleFor, type Grid, type RaceResult, type RoomState, type Settled, type Tick } from '@/lib/types'
+import { statsOf, titleFor, type Grid, type RaceResult, type RoomState, type Settled, type Template, type Tick } from '@/lib/types'
 import { txUrl, short } from '@/lib/config'
 import type { Hatched } from '@/lib/useRoomLive'
 import { sound } from '@/lib/sound'
 import { authSocket, getSocket } from '@/http/realtime/socket'
 
-export function Lobby({ room, me, loadout, onLoadout, onGarage, onStart, starting }: { room: RoomState; me: string; loadout: number | null; onLoadout: (p: number | null) => void; onGarage: () => void; onStart: () => void; starting: boolean }) {
-  const { parts, me: profile } = useSession()
+export function Lobby({ room, me, onStart, starting }: { room: RoomState; me: string; onStart: () => void; starting: boolean }) {
+  const { parts } = useSession()
   const isHost = room.host === me
-  const owned = parts.filter((p) => profile?.parts.includes(p.typeId))
   const myPlayer = room.players.find((p) => p.address === me)
-  const part = parts.find((p) => p.typeId === loadout) || null
-  const st = statsOf((myPlayer?.template as any) || 'balanced', part)
-  const tip = room.track.slug === 'alpine-ring' ? 'Long straights: speed wins, weight costs' : 'Twisty: heavy ducks grip better'
+  // The template and the part were committed on chain with the join order: they are shown, never edited here.
+  const part = parts.find((p) => p.typeId === myPlayer?.partTypeId) || null
+  const st = statsOf((myPlayer?.template as Template | undefined) ?? 'balanced', part)
+  const tip = room.track.profile.speed >= 0.9 ? 'Fast track: speed wins, weight costs' : 'Twisty: heavy ducks grip better'
   return (
     <div className="anim-enter" style={{ position: 'absolute', inset: 0, padding: '12px 16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -26,15 +26,11 @@ export function Lobby({ room, me, loadout, onLoadout, onGarage, onStart, startin
         <span style={{ fontSize: 13, fontWeight: 900 }}>{room.count}/{room.maxDucks}</span>
       </div>
       <Card style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 12px' }}>
-        <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 2, color: '#5B4AB8' }}>LOADOUT FOR {room.track.name.toUpperCase()}</div>
+        <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 2, color: '#5B4AB8' }}>YOUR LOADOUT · LOCKED ON CHAIN</div>
         <div style={{ fontSize: 12, fontWeight: 800 }}>{tip}</div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {[{ label: 'No part', id: null as number | null }, ...owned.map((p) => ({ label: `${p.name} ${dots(p.fit[room.track.slug] || 1)}`, id: p.typeId as number | null }))].map((o) => (
-            <button key={String(o.id)} type="button" className="dw-btn" aria-pressed={loadout === o.id} onClick={() => onLoadout(o.id)} style={{ padding: '6px 10px', border: '3px solid #000', borderRadius: 12, fontSize: 13, fontWeight: 900, color: '#1E1446', background: loadout === o.id ? '#FFC93C' : '#F1EDFF' }}>{o.label}</button>
-          ))}
-        </div>
+        <div style={{ fontSize: 15, fontWeight: 900 }}>{part ? `${part.name} · ${part.slot}` : 'No part'}</div>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 800 }}>SPD {st[0]} · WGT {st[1]} · BST {st[2]}</div>
-        <button type="button" onClick={onGarage} style={{ alignSelf: 'flex-start', height: 26, background: 'none', border: 'none', color: '#1E1446', fontSize: 12, fontWeight: 800, textDecoration: 'underline', padding: 0 }}>Get more parts in the garage</button>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#5B4AB8' }}>Fixed when you joined. To race with another part, equip it in your garage before joining a room.</div>
       </Card>
       <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 2 }}>IN THE ROOM</div>
       <div style={{ flex: 1, minHeight: 0, overflow: 'auto', display: 'flex', flexWrap: 'wrap', alignContent: 'flex-start', gap: 6 }}>
@@ -69,7 +65,7 @@ export function Countdown({ n, track, laps, name }: { n: number; track: string; 
   )
 }
 
-export function RaceView({ room, grid, tick, me, gap }: { room: RoomState; grid: Grid; tick: Tick | null; me: string; gap: number | null }) {
+export function RaceView({ room, grid, tick, me, gap, wide }: { room: RoomState; grid: Grid; tick: Tick | null; me: string; gap: number | null; wide?: boolean }) {
   const { say } = useSession()
   const [pops, setPops] = useState<{ id: number; x: number }[]>([])
   const geo = useMemo(() => buildTrack(room.track.path, room.track.closed, room.track.laps), [room.track])
@@ -94,7 +90,7 @@ export function RaceView({ room, grid, tick, me, gap }: { room: RoomState; grid:
         <Pill bg="#FFC93C" fg="#1E1446" style={{ maxWidth: '54%', minWidth: 0 }}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>LAP {lapNow}/{geo.laps} · {room.track.name}</span></Pill>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#C9B8FF', whiteSpace: 'nowrap', flex: 'none' }}>BLOCK #{tick?.b?.toLocaleString('en-US') ?? '…'}{gap ? <span className="dw-narrow-hide"> · {gap}ms</span> : null}</span>
       </div>
-      <div style={{ position: 'relative', height: 'clamp(136px, 26dvh, 240px)', flex: 'none', border: '4px solid #000', borderRadius: 22, overflow: 'hidden', background: '#836EF9' }}>
+      <div style={{ position: 'relative', height: wide ? 'min(52dvh, 460px)' : 'clamp(136px, 26dvh, 240px)', flex: 'none', border: '4px solid #000', borderRadius: 22, overflow: 'hidden', background: '#836EF9' }}>
         <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(90deg, rgba(255,255,255,0) 0 120px, rgba(255,255,255,0.18) 120px 124px, rgba(255,255,255,0) 124px 160px)', animation: 'dwWater .5s linear infinite' }} />
         <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 24, background: '#2A1D5E', borderBottom: '4px solid #000' }} />
         <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 24, background: '#2A1D5E', borderTop: '4px solid #000' }} />
@@ -112,7 +108,7 @@ export function RaceView({ room, grid, tick, me, gap }: { room: RoomState; grid:
         })}
         {me_ && (
           <div className="anim-bob-fast" style={{ position: 'absolute', left: 150, top: '30%', width: 100, zIndex: 50 }}>
-            <DuckSvg template={me_.template} bodyColor={me_.bodyColor} billColor={me_.billColor} cosmetics={me_.cosmetics} partTypeId={me_.partTypeId} width={100} label="Your duck" />
+            <DuckSvg template={me_.template} bodyColor={me_.bodyColor} billColor={me_.billColor} cosmetics={me_.cosmetics} partTypeId={me_.partTypeId} partSlot={me_.partSlot} partColor={me_.partColor} width={100} label="Your duck" />
             <div style={{ position: 'absolute', left: 6, top: -16, padding: '1px 8px', border: '2px solid #000', borderRadius: 999, background: '#FFC93C', color: '#1E1446', fontSize: 11, fontWeight: 900, whiteSpace: 'nowrap' }}>YOU · #{myRank || '–'}</div>
           </div>
         )}
@@ -133,7 +129,7 @@ export function RaceView({ room, grid, tick, me, gap }: { room: RoomState; grid:
           <div style={{ fontSize: 12, fontWeight: 800, color: '#C9B8FF', lineHeight: 1.15 }}>{myRank === 1 ? 'Leading the race' : lead && myIdx >= 0 ? `Behind the leader by ${((lead.v - p[myIdx]) / 100).toFixed(1)}` : ''}</div>
         </div>
       </div>
-      <div className="race-near" style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 4 }}>
+      {!wide && <div className="race-near" style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 4 }}>
         {near.map((o) => {
           const r = order.indexOf(o) + 1
           const e = grid.entrants[o.i]
@@ -147,8 +143,8 @@ export function RaceView({ room, grid, tick, me, gap }: { room: RoomState; grid:
             </div>
           )
         })}
-      </div>
-      <div style={{ flex: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+      </div>}
+      {!wide && <div style={{ flex: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div className="cheer-lane" style={{ position: 'relative', height: 40, overflow: 'hidden' }} aria-hidden>
           {pops.map((c) => <span key={c.id} style={{ position: 'absolute', left: c.x, top: 4, animation: 'dwTapLane 1s ease-out forwards', fontFamily: 'var(--font-display)', fontSize: 26, color: '#FFC93C', WebkitTextStroke: '5px #000', paintOrder: 'stroke fill' }}>+1</span>)}
         </div>
@@ -162,8 +158,73 @@ export function RaceView({ room, grid, tick, me, gap }: { room: RoomState; grid:
         <div style={{ paddingBottom: 6 }}>
           <Btn h={62} size={28} display onClick={() => { sound.play('cheer'); getSocket().emit('race:cheer'); const id = Date.now(); setPops((l) => [...l.slice(-4), { id, x: 10 + Math.round(Math.random() * 160) }]); if (pops.length > 30) say('Your duck hears you!') }} style={{ width: '100%' }}>CHEER</Btn>
         </div>
-      </div>
+      </div>}
     </div>
+  )
+}
+
+/**
+ * Laptop right panel during a race (design: play-laptop-race.dc.html): duck card, rank, top 5 and CHEER.
+ * CHEER also answers the Space key (owner decision, plan 0014 Q2); phones keep the tap button in RaceView.
+ */
+export function RacePanel({ grid, tick, me }: { grid: Grid; tick: Tick | null; me: string }) {
+  const { say } = useSession()
+  const p = tick?.p || grid.entrants.map(() => 0)
+  const order = useMemo(() => p.map((v, i) => ({ i, v })).sort((a, b) => b.v - a.v), [p])
+  const myIdx = grid.entrants.findIndex((e) => e.address === me)
+  const myRank = order.findIndex((o) => o.i === myIdx) + 1
+  const mine = grid.entrants[myIdx]
+  const energy = myIdx >= 0 ? Math.max(0, Math.min(100, tick?.en?.[myIdx] ?? 0)) : 0
+  useEffect(() => { authSocket() }, [])
+  const cheer = () => { sound.play('cheer'); getSocket().emit('race:cheer') }
+  const cheerRef = useRef(cheer)
+  useEffect(() => { cheerRef.current = cheer })
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== 'Space' || e.repeat) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'BUTTON' || t.isContentEditable)) return // a focused button already clicks on Space
+      e.preventDefault()
+      cheerRef.current()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+  return (
+    <aside aria-label="Your race" style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: 20, height: '100%', boxSizing: 'border-box', background: '#1E1446', borderLeft: '4px solid #000' }}>
+      {mine && (
+        <div style={{ background: '#fff', color: '#1E1446', border: '4px solid #000', borderRadius: 22, boxShadow: '0 6px 0 #000', padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <DuckSvg template={mine.template} bodyColor={mine.bodyColor} billColor={mine.billColor} cosmetics={mine.cosmetics} partTypeId={mine.partTypeId} partSlot={mine.partSlot} partColor={mine.partColor} width={84} label="Your duck" />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mine.name}</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: '#5B4AB8' }}>{mine.template}</div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 1, color: '#5B4AB8' }}>RANK</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 40, lineHeight: 1 }}>P{myRank || '–'}</div>
+          </div>
+        </div>
+      )}
+      <div style={{ background: '#120B2E', border: '4px solid #000', borderRadius: 22, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 2, color: '#C9B8FF' }}>TOP 5</div>
+        {order.slice(0, 5).map((o, r) => (
+          <div key={o.i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 15, fontWeight: 900 }}>
+            <span style={{ width: 28, fontFamily: 'var(--font-display)', fontSize: 20, color: '#FFC93C' }}>{r + 1}</span>
+            <span style={{ width: 18, height: 18, borderRadius: '50%', border: '3px solid #000', background: grid.entrants[o.i]?.color }} />
+            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{grid.entrants[o.i]?.name}{o.i === myIdx ? ' (you)' : ''}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ flex: 1 }} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 800, color: '#C9B8FF' }}>
+        <span>TAP TO BOOST · or press Space</span>
+        <span style={{ fontVariantNumeric: 'tabular-nums', color: energy > 0 ? '#B8F35A' : '#C9B8FF' }}>BOOST +{Math.round((energy * (grid.cheerPct ?? 0)) / 100)}%</span>
+      </div>
+      <div role="meter" aria-label={`Cheer energy ${energy} percent`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={energy} style={{ height: 12, background: '#2A1D5E', border: '3px solid #000', borderRadius: 999, overflow: 'hidden' }}>
+        <div style={{ width: `${energy}%`, height: '100%', background: energy > 66 ? '#B8F35A' : '#FFC93C', transition: 'width .25s linear' }} />
+      </div>
+      <button type="button" className="dw-btn" onClick={() => { cheer(); if (myIdx < 0) say('Spectators cannot cheer') }} style={{ height: 120, background: '#FFC93C', color: '#1E1446', border: '5px solid #000', borderRadius: 30, boxShadow: '0 9px 0 #000', fontFamily: 'var(--font-display)', fontSize: 52 }}>CHEER</button>
+    </aside>
   )
 }
 
@@ -201,10 +262,9 @@ export function Result({ result, settled, hatched, me, duckName, trackName, onHo
       )}
       {myHatch && (
         <div style={{ animation: 'dwSlideR .55s cubic-bezier(.2,.9,.3,1.15) .2s both', background: '#1E1446', color: '#fff', border: '4px solid #000', borderRadius: 18, padding: '10px 12px' }}>
-          <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 2, color: '#FFC93C' }}>FIRST RACE DONE · DUCK HATCHED</div>
-          <div style={{ fontSize: 14, fontWeight: 900 }}>{duckName} is now NFT #{myHatch.tokenId} in your wallet</div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#E6E0FF' }}>One per wallet · tradeable · 5% royalty to you</div>
-          <a href={txUrl(myHatch.tx)} target="_blank" rel="noreferrer" style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#FFC93C' }}>{short(myHatch.tx)}</a>
+          <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 2, color: '#FFC93C' }}>FIRST RACE DONE · EGG HATCHED</div>
+          <div style={{ fontSize: 14, fontWeight: 900 }}>{duckName} is a full duck now</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#E6E0FF' }}>Your duck lives in your profile. Podium finishes earn soulbound titles.</div>
         </div>
       )}
       <Card style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 3 }}>

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 1.12 |
+| **Version** | 1.13 |
 | **Status** | Draft — awaiting owner approval. The "Approved" status written in v1.2 was set by the agent, not by the owner, and is withdrawn. |
 | **Date Created** | 2026-11-16 |
 | **Last Updated** | 2026-11-17 |
@@ -22,6 +22,7 @@
 | 1.10 | 2026-11-17 | §12.5: Slither audit of the production contracts (53 findings, 0 after the fixes and the reasoned annotations). The testnet contracts deployed before the fixes do not contain them. |
 | 1.11 | 2026-11-17 | §12.6: audit extended to every source file including `MockUSDC`, ERC-721 conformance, real invariant tests for the Vault, and a mutation check of those tests. |
 | 1.12 | 2026-11-17 | §12.7: testnet redeployed from the cleaned and audited code (no comments except parameter docblocks, full-word names, ABI parameter names spelled out, Slither fixes included); roles checked on chain before and after; Fly and Vercel staging updated. The §12.3 table is superseded by the §12.7 addresses. |
+| 1.13 | 2026-11-17 | §12.8: testnet redeployed with the owner wallet `0x5617` as the deployer and owner (no pending ownership); the §12.7 deploy by the relayer key is superseded. The smart-contract env had a duplicate `RPC_URL` (public RPC) that was removed. |
 
 > **Handoff to Claude Code.** Read `AGENTS.md` first. This plan is a **Draft**. Do not write code until the owner sets Status to Approved. When approved, implement in the order of §10. Every item marked `UNVERIFIED` must be resolved by the test or source named next to it before the code depends on it. Ask the owner about anything in §11 instead of deciding it.
 
@@ -506,3 +507,35 @@ Owner and treasury were also read from the v1 mainnet Vault and Race and match. 
 | E2E on the real deployment | PASS: 31 ticks, replay from the on-chain seed identical 31 of 31, total 0.38 MON |
 | Art | `tokenURI` of parts 1 and 2 and tracks 1 and 2 read from chain: closed SVG with drawn shapes and an `animation_url` |
 | Still open | owner `acceptOwnership` on the five contracts, then `CheckDeploy` with `EXPECTED_OWNER` set to the owner; Vercel production branch of `duckwek-stage` set to `stage` in the dashboard |
+
+### 12.8 Testnet redeploy by the owner wallet (2026-11-17, chain 10143)
+
+**Supersedes §12.7.** The §12.7 contracts were deployed with the relayer key, which is not allowed: the relayer is operator only. This deploy was signed by the owner wallet `0x5617…CAE4`; the script derived the signer address and stopped on any mismatch. RPC: Alchemy testnet (`monad-testnet.g.alchemy.com`). The smart-contract `.env` had a second `RPC_URL` line pointing at the public RPC (the last line wins when the file is sourced); it was removed.
+
+| Role | Wallet | Evidence from the chain |
+|---|---|---|
+| Deployer and owner | `0x5617…CAE4` | `owner()` of Vault, Race, TrackNFT, PartNFT, Badge and MockUSDC returns it; `pendingOwner()` is zero; `FINAL_OWNER` was left empty on purpose |
+| Treasury | `0xD3AB…F2D9` | `vault.treasury()` returns it |
+| Operator | `0x5C09…4B49` | `CheckDeploy` printed `OK` with `EXPECTED_OWNER` = `0x5617…` |
+
+| Contract | Address |
+|---|---|
+| MockUSDC | `0x13c1E35Da2A4fD71Bc04EB06B67c8a2D49239eFb` |
+| TrackNFT | `0x80b70243490Ca3313489eaCE2ED2fe5e49ED46c1` |
+| PartNFT | `0x7D81e6C022E071e4cA09ca540F8EBd8Ab32BD1f6` |
+| Badge | `0x2fADFccA6aa14179B77a7637B993C19BcE9FD5Be` |
+| DuckWekVault | `0xB6A3d1a707073624f89FAB584Ae061559aBB9e34` |
+| DuckWekRace | `0x8aAbC84D47034587337E10502A3E508B2a143802` |
+| PartRenderer | `0x715d992B2613998E33738D0149688A87B0c7fB2B` |
+| TrackRenderer | `0x5f869E2903da959d6A62FC44164E996240887AC3` |
+| BadgeRenderer | `0x4893e6BAa3805C16B1D370a863AfD35A32DdE9Ea` |
+
+| Item | Result |
+|---|---|
+| Deploy | 27 transactions (nonce 345 to 371). The first run stopped after 5 transactions: Alchemy answered `Block requested not found` while sending. The chain showed 5 receipts, no pending, and `forge script --resume` sent the remaining 22 with the same addresses. Cost 3.56 MON from the owner wallet (77.80 to 74.23). |
+| Verification | MonadVision "perfect match" for all nine; Monadscan pass or "Already Verified" (same bytecode) for all nine |
+| Fly staging | secrets for the six addresses replaced; boot synced the catalog from the new contracts (3 parts, 2 tracks); machine stopped afterwards |
+| Vercel staging | the six `NEXT_PUBLIC_*_ADDRESS` variables replaced in `duckwek-stage`; production deployment Ready; the RPC variable is Alchemy testnet |
+| E2E on the real deployment | PASS: replay from the on-chain seed identical 26 of 26, 0.40 MON for the relayer |
+| Art | `tokenURI` of parts 1 and 2 and tracks 1 and 2 read from chain: closed SVG with drawn shapes and an `animation_url` |
+| MockUSDC | a new one was deployed again, owned by `0x5617…`, with 1,000,000 USDC minted to it; welcome mint on |

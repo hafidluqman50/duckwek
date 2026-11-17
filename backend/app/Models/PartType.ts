@@ -5,16 +5,16 @@ export type PartSlot = 'wings' | 'tail' | 'bill'
 
 class PartType extends Model<InferAttributes<PartType>, InferCreationAttributes<PartType>> {
   declare id: CreationOptional<number>
-  declare type_id: number // PartNFT on-chain type id
+  declare type_id: number
   declare name: string
   declare slot: PartSlot
   declare speed: number
   declare weight: number
   declare boost: number
-  declare color: number // fill colour of the part (on-chain trait), 0xRRGGBB
-  declare stats: Record<string, number> // every stat key of the chain registry
+  declare color: number
+  declare stats: Record<string, number>
   declare fit: Record<string, number>
-  declare price: string // USDC base units
+  declare price: string
   declare creator: string
   declare platform: boolean
   declare status: 'active' | 'discontinued'

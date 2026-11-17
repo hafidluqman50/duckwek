@@ -1,6 +1,5 @@
-import { CHAIN_LABEL, CONTRACTS, addressUrl, short } from '@/lib/config'
+import { CHAIN_LABEL, CONTRACTS, explorerAddressUrl, shortenAddress } from '@/lib/config'
 
-/** Addresses come from env via lib/config.ts, so the table follows testnet / mainnet / v2 by configuration. */
 export function Contracts() {
   return (
     <section id="contracts" className="border-t-[6px] border-black bg-ink">
@@ -14,10 +13,10 @@ export function Contracts() {
           <div className="min-w-0 flex-[1_1_320px] overflow-hidden rounded-[26px] border-[5px] border-black bg-white text-ink shadow-[0_10px_0_#000] md:flex-[1_1_560px]">
             <div className="border-b-4 border-black bg-duck px-5 py-3.5 font-black tracking-wider">{CHAIN_LABEL}</div>
             <div className="overflow-x-auto">
-              {CONTRACTS.map((c) => (
-                <a key={c.name} href={addressUrl(c.address)} target="_blank" rel="noreferrer" className="flex justify-between gap-4 border-b-[3px] border-[#EEE8FF] px-5 py-3 text-ink no-underline">
-                  <span className="font-black">{c.name}</span>
-                  <span className="font-mono text-sm text-violet">{short(c.address)}</span>
+              {CONTRACTS.map((contract) => (
+                <a key={contract.name} href={explorerAddressUrl(contract.address)} target="_blank" rel="noreferrer" className="flex justify-between gap-4 border-b-[3px] border-[#EEE8FF] px-5 py-3 text-ink no-underline">
+                  <span className="font-black">{contract.name}</span>
+                  <span className="font-mono text-sm text-violet">{shortenAddress(contract.address)}</span>
                 </a>
               ))}
             </div>

@@ -12,6 +12,7 @@ const LINKS = [
 
 export function Nav() {
   const [open, setOpen] = useState(false)
+
   return (
     <header className="relative mx-auto flex max-w-[1280px] items-center justify-between gap-4 px-4 py-4 md:px-6 md:py-[22px]">
       <a href="#top" className="stk-s font-display text-[26px] text-duck no-underline md:text-[34px]">DUCKWEK</a>
@@ -25,7 +26,7 @@ export function Nav() {
         type="button"
         aria-label={open ? 'Close menu' : 'Open menu'}
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen((isOpen) => !isOpen)}
         className="flex h-11 w-11 items-center justify-center rounded-full border-[3px] border-black bg-white shadow-[0_4px_0_#000] md:hidden"
       >
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d={open ? 'M6 6l12 12M18 6L6 18' : 'M4 7h16M4 12h16M4 17h16'} stroke="#1E1446" strokeWidth="3" strokeLinecap="round" /></svg>

@@ -1,34 +1,39 @@
-/** Canvas duck sprites shared by the stage race layer and the starting grid (moved out of app/stage/[code]/ui.tsx). */
 const DUCK_BODY = '10,60 30,40 70,38 100,50 95,75 60,88 25,84'
 const DUCK_HEAD = '70,40 72,18 88,8 102,16 104,36 92,46'
 const DUCK_BILL = '102,20 119,27 102,34'
-const SPRITE_PX = 3 // sprite resolution per design unit: sharp up to the largest duck on a 4K screen
+const SPRITE_PX = 3
 const sprites = new Map<string, HTMLCanvasElement>()
-const poly = (ctx: CanvasRenderingContext2D, pts: string) => {
-  const a = pts.split(' ').map((q) => q.split(',').map(Number))
-  ctx.beginPath()
-  ctx.moveTo(a[0][0], a[0][1])
-  for (let k = 1; k < a.length; k++) ctx.lineTo(a[k][0], a[k][1])
-  ctx.closePath()
+
+const tracePolygon = (context: CanvasRenderingContext2D, points: string) => {
+  const corners = points.split(' ').map((pair) => pair.split(',').map(Number))
+  context.beginPath()
+  context.moveTo(corners[0][0], corners[0][1])
+
+  for (let cornerIndex = 1; cornerIndex < corners.length; cornerIndex++) context.lineTo(corners[cornerIndex][0], corners[cornerIndex][1])
+
+  context.closePath()
 }
-/** One duck in its colour, drawn once into its own small canvas (the same polygons as MiniDuck, stroke 7). */
-export function spriteOf(color: string): HTMLCanvasElement {
-  let c = sprites.get(color)
-  if (c) return c
-  c = document.createElement('canvas')
-  c.width = 120 * SPRITE_PX
-  c.height = 100 * SPRITE_PX
-  const ctx = c.getContext('2d')!
-  ctx.scale(SPRITE_PX, SPRITE_PX)
-  ctx.lineJoin = 'round'
-  ctx.strokeStyle = '#000'
-  ctx.lineWidth = 7
-  ctx.fillStyle = color
-  poly(ctx, DUCK_BODY); ctx.fill(); ctx.stroke()
-  poly(ctx, DUCK_HEAD); ctx.fill(); ctx.stroke()
-  ctx.fillStyle = '#FF9F1C'
-  ctx.lineWidth = 6
-  poly(ctx, DUCK_BILL); ctx.fill(); ctx.stroke()
-  sprites.set(color, c)
-  return c
+
+export function spriteForColor(color: string): HTMLCanvasElement {
+  let sprite = sprites.get(color)
+
+  if (sprite) return sprite
+
+  sprite = document.createElement('canvas')
+  sprite.width = 120 * SPRITE_PX
+  sprite.height = 100 * SPRITE_PX
+  const context = sprite.getContext('2d')!
+  context.scale(SPRITE_PX, SPRITE_PX)
+  context.lineJoin = 'round'
+  context.strokeStyle = '#000'
+  context.lineWidth = 7
+  context.fillStyle = color
+  tracePolygon(context, DUCK_BODY); context.fill(); context.stroke()
+  tracePolygon(context, DUCK_HEAD); context.fill(); context.stroke()
+  context.fillStyle = '#FF9F1C'
+  context.lineWidth = 6
+  tracePolygon(context, DUCK_BILL); context.fill(); context.stroke()
+  sprites.set(color, sprite)
+
+  return sprite
 }

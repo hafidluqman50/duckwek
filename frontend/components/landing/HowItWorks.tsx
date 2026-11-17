@@ -1,12 +1,11 @@
 import { MiniDuck } from '@/components/duck/DuckSvg'
 
 const STEPS = [
-  { n: 1, title: 'Scan the QR', body: "The projector shows the room's QR. Connect a wallet and sign once. No MON needed: the relayer pays gas.", bg: 'bg-white' },
-  { n: 2, title: 'Hatch your duck', body: 'One duck per wallet. It starts as an egg and hatches on your first paid race.', bg: 'bg-duck' },
-  { n: 3, title: 'Race the room', body: 'Pay a 0.10 USDC ticket. Every Monad block moves every duck one step. Tap CHEER to push yours.', bg: 'bg-monad' },
+  { number: 1, title: 'Scan the QR', body: "The projector shows the room's QR. Connect a wallet and sign once. No MON needed: the relayer pays gas.", background: 'bg-white' },
+  { number: 2, title: 'Hatch your duck', body: 'One duck per wallet. It starts as an egg and hatches on your first paid race.', background: 'bg-duck' },
+  { number: 3, title: 'Race the room', body: 'Pay a 0.10 USDC ticket. Every Monad block moves every duck one step. Tap CHEER to push yours.', background: 'bg-monad' },
 ]
 
-/** Pinned for ~3 screens while scrolling (see useScrollStory); static and fully visible without JS or with reduced motion. */
 export function HowItWorks() {
   return (
     <section id="how" data-how className="border-y-[6px] border-black bg-ink">
@@ -16,15 +15,14 @@ export function HowItWorks() {
           <h2 className="stk m-0 font-display text-[44px] font-normal leading-none text-duck md:text-[clamp(44px,5vw,72px)]">Scan. Hatch. Race.</h2>
         </div>
         <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-6">
-          {STEPS.map((s) => (
-            <div key={s.n} data-how-card className={`${s.bg} flex flex-col gap-3.5 rounded-[30px] border-[5px] border-black p-7 text-ink shadow-[0_10px_0_#000]`}>
-              <div className={`flex h-16 w-16 items-center justify-center rounded-full border-4 border-black font-display text-[34px] ${s.n === 1 ? 'bg-duck' : 'bg-white'}`}>{s.n}</div>
-              <div className="font-display text-4xl">{s.title}</div>
-              <p className="m-0 text-[17px] font-bold leading-normal">{s.body}</p>
+          {STEPS.map((step) => (
+            <div key={step.number} data-how-card className={`${step.background} flex flex-col gap-3.5 rounded-[30px] border-[5px] border-black p-7 text-ink shadow-[0_10px_0_#000]`}>
+              <div className={`flex h-16 w-16 items-center justify-center rounded-full border-4 border-black font-display text-[34px] ${step.number === 1 ? 'bg-duck' : 'bg-white'}`}>{step.number}</div>
+              <div className="font-display text-4xl">{step.title}</div>
+              <p className="m-0 text-[17px] font-bold leading-normal">{step.body}</p>
             </div>
           ))}
         </div>
-        {/* One block = one step: the duck moves one notch per step; the egg cracks at step 2. */}
         <div aria-hidden="true" className="relative h-[84px] rounded-[22px] border-4 border-black bg-monad">
           <div className="absolute inset-x-6 bottom-3 h-1 border-t-[3px] border-dashed border-ink" />
           <div data-how-egg className="absolute bottom-3 left-[8%] w-14">

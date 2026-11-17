@@ -9,13 +9,13 @@ export class OrderController extends BaseController {
     super()
   }
 
-  /** The player signed once at connect: the order is charged under that session, there is nothing more to sign. */
-  public async create(req: IAuthRequest, res: Response): Promise<void> {
+  public async create(request: IAuthRequest, response: Response): Promise<void> {
     try {
-      const dto = new OrderCreateRequest({ ...req.body, payer: req.address! }).toDTO()
-      this.ok(res, 'Paid · confirmed on Monad', await this.orderService.create(dto))
-    } catch (e) {
-      this.fail(res, e)
+      const orderInput = new OrderCreateRequest({ ...request.body, payer: request.address! }).toDTO()
+
+      this.ok(response, 'Paid · confirmed on Monad', await this.orderService.create(orderInput))
+    } catch (error) {
+      this.fail(response, error)
     }
   }
 }

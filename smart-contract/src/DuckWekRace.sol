@@ -6,23 +6,6 @@ import {DuckWekRoles} from "./DuckWekRoles.sol";
 import {DuckWekVault} from "./DuckWekVault.sol";
 import {Badge} from "./Badge.sol";
 
-/// @title DuckWek on-chain race: paid entry, the seed, every step, the result, first-time achievements.
-/// @notice One signature per player, at connect (the permit the Vault charges under). On-chain here:
-///   - `createRoom`: the host's circuit rent (1 USDC) is charged by the Vault, the room is opened and the host is the first
-///     entrant (the rent covers the host's entry).
-///   - `joinBatch`: every ticket (0.10 USDC) is charged by the Vault in this transaction, `Joined` is emitted for each one
-///     that was paid and `JoinFailed` for each one that could not be charged, without blocking the others.
-///   - `start`: fixes `startBlock` and the race `seed` (`prevrandao`, the room key and the player count), and commits the
-///     participant list.
-///   - `tick`: one transaction per race step. The step `n = block.number - startBlock` is derived HERE, at inclusion, so the
-///     backend never reads a block, a block hash or a log range. The positions are not written on-chain: they are a pure
-///     function of (seed, participant list, n) and anyone recomputes them.
-///   - `finalize`: standing root and podium. Podium finishers must be paid entrants of the room (checked against the Vault);
-///     each gets a soulbound achievement the first time they reach each rank.
-/// @dev This contract must be an operator of the Vault, and the minter of the Badge. Trust model: the contract RECORDS
-///      the race; the operator posts the standing root and the podium. The seed is `prevrandao` at `start`, so the operator
-///      chooses the moment of `start` (and therefore which `prevrandao` becomes the seed): the contract records who did it,
-///      it does not prove who picked the moment.
 contract DuckWekRace is DuckWekRoles, ReentrancyGuard {
     enum Status {
         None,
@@ -31,10 +14,9 @@ contract DuckWekRace is DuckWekRoles, ReentrancyGuard {
         Finished
     }
 
-    /// @dev Slot 0 packs the fields read on the hot `tick` path. `standingRoot` and `seed` use their own slots.
     struct Room {
         Status status;
-        uint64 trackId; // TrackNFT id (platform circuits and creator circuits share one id space)
+        uint64 trackId;
         uint32 startBlock;
         uint32 endBlock;
         uint16 players;
@@ -42,24 +24,35 @@ contract DuckWekRace is DuckWekRoles, ReentrancyGuard {
         bytes32 seed;
     }
 
-    uint256 public constant MAX_BATCH = 100; // each join is a USDC payment, so a batch is heavier than a plain event
+    uint256 public constant MAX_BATCH = 100;
 
     DuckWekVault public immutable vault;
     Badge public immutable badge;
 
     uint256 public nextRoomId;
     mapping(uint256 => Room) public rooms;
-    mapping(bytes32 => uint256) public roomIdOf; // roomKey (keccak of the room code) => room id
-    mapping(uint256 => bytes32) public keyOf; // room id => roomKey
-    /// @notice Achievements already earned by a player. bit0 winner, bit1 runner-up, bit2 third.
+    mapping(bytes32 => uint256) public roomIdOf;
+    mapping(uint256 => bytes32) public keyOf;
     mapping(address => uint8) public achieved;
 
-    event RoomCreated(uint256 indexed roomId, bytes32 indexed roomKey, address indexed host, uint64 trackId, uint32 layoutVersion, uint256 paid);
-    /// @dev The full loadout is committed here, before `start` fixes the seed.
+    event RoomCreated(
+        uint256 indexed roomId,
+        bytes32 indexed roomKey,
+        address indexed host,
+        uint64 trackId,
+        uint32 layoutVersion,
+        uint256 paid
+    );
     event Joined(uint256 indexed roomId, address indexed player, DuckWekVault.Loadout loadout);
     event JoinFailed(uint256 indexed roomId, address indexed player, bytes reason);
-    event Started(uint256 indexed roomId, uint32 startBlock, uint16 players, bytes32 participantsRoot, bytes32 seed, bytes32 engineVersion);
-    /// @dev `n` = block.number - startBlock at inclusion. May land several per block: the step is what counts.
+    event Started(
+        uint256 indexed roomId,
+        uint32 startBlock,
+        uint16 players,
+        bytes32 participantsRoot,
+        bytes32 seed,
+        bytes32 engineVersion
+    );
     event Tick(uint256 indexed roomId, uint32 n);
     event Finalized(uint256 indexed roomId, bytes32 standingRoot, uint32 endBlock, address[3] podium);
     event AchievementAwarded(uint256 indexed roomId, address indexed player, uint8 kind);
@@ -82,146 +75,158 @@ contract DuckWekRace is DuckWekRoles, ReentrancyGuard {
         badge = Badge(badge_);
     }
 
-    // ---------------------------------------------------------------- lifecycle
+    // ─── Lifecycle ───
 
-    // slither-disable-start reentrancy-no-eth,reentrancy-benign -- guarded by nonReentrant, operator only, and the only callees are the Vault, the Badge and the payment token deployed with this system
-    /// @notice Open a room. The order is the host's circuit rent (kind CREATE_ROOM, ref = track id). `p.deadline == 0`
-    ///         means the allowance from the host's session already exists.
-    function createRoom(DuckWekVault.Order calldata o, DuckWekVault.Permit calldata p)
+    // slither-disable-start reentrancy-no-eth,reentrancy-benign
+    function createRoom(DuckWekVault.Order calldata order, DuckWekVault.Permit calldata permit)
         external
         onlyOperator
         whenNotPaused
         nonReentrant
-        returns (uint256 id)
+        returns (uint256 roomId)
     {
-        if (o.kind != uint8(DuckWekVault.Kind.CREATE_ROOM)) revert BadKind();
-        if (roomIdOf[o.roomKey] != 0) revert RoomKeyUsed();
+        if (order.kind != uint8(DuckWekVault.Kind.CREATE_ROOM)) revert BadKind();
 
-        _charge(o, p); // charges the rent, registers the host as the first entrant
+        if (roomIdOf[order.roomKey] != 0) revert RoomKeyUsed();
 
-        id = ++nextRoomId;
-        roomIdOf[o.roomKey] = id;
-        keyOf[id] = o.roomKey;
+        _charge(order, permit);
+
+        roomId = ++nextRoomId;
+        roomIdOf[order.roomKey] = roomId;
+        keyOf[roomId] = order.roomKey;
         // slither-disable-next-line unused-return
-        (, uint64 trackId,,, uint32 layoutVersion) = vault.rooms(o.roomKey); // only the track and the layout version are needed
-        rooms[id] = Room({status: Status.Open, trackId: trackId, startBlock: 0, endBlock: 0, players: 1, standingRoot: bytes32(0), seed: bytes32(0)});
-        emit RoomCreated(id, o.roomKey, o.payer, trackId, layoutVersion, o.amount);
-        emit Joined(id, o.payer, o.loadout);
+        (, uint64 trackId,,, uint32 layoutVersion) = vault.rooms(order.roomKey);
+        rooms[roomId] = Room({
+            status: Status.Open,
+            trackId: trackId,
+            startBlock: 0,
+            endBlock: 0,
+            players: 1,
+            standingRoot: bytes32(0),
+            seed: bytes32(0)
+        });
+        emit RoomCreated(roomId, order.roomKey, order.payer, trackId, layoutVersion, order.amount);
+        emit Joined(roomId, order.payer, order.loadout);
     }
     // slither-disable-end reentrancy-no-eth,reentrancy-benign
 
-    // slither-disable-start reentrancy-no-eth,reentrancy-benign -- guarded by nonReentrant, operator only, and the only callees are the Vault, the Badge and the payment token deployed with this system
-    // slither-disable-start calls-loop -- one try/catch charge per ticket by design, batch size capped by MAX_BATCH
-    /// @notice Record paid joins. Each order is a player's ticket (kind JOIN_ROOM), charged by the Vault under that player's
-    ///         session. A ticket that cannot be charged (no allowance, no USDC, already joined, room full) emits `JoinFailed`
-    ///         and does not block the others.
-    function joinBatch(uint256 roomId, DuckWekVault.Order[] calldata os, DuckWekVault.Permit[] calldata ps)
+    // slither-disable-start reentrancy-no-eth,reentrancy-benign
+    // slither-disable-start calls-loop
+    function joinBatch(uint256 roomId, DuckWekVault.Order[] calldata orders, DuckWekVault.Permit[] calldata permits)
         external
         onlyOperator
         whenNotPaused
         nonReentrant
     {
-        Room storage r = rooms[roomId];
-        if (r.status != Status.Open) revert WrongStatus(r.status);
-        uint256 n = os.length;
-        if (n != ps.length) revert LengthMismatch();
-        if (n > MAX_BATCH) revert BatchTooLarge();
+        Room storage room = rooms[roomId];
+        if (room.status != Status.Open) revert WrongStatus(room.status);
 
-        bytes32 key = keyOf[roomId];
+        uint256 orderCount = orders.length;
+        if (orderCount != permits.length) revert LengthMismatch();
+
+        if (orderCount > MAX_BATCH) revert BatchTooLarge();
+
+        bytes32 roomKey = keyOf[roomId];
         uint16 paid = 0;
-        for (uint256 i; i < n; ++i) {
-            DuckWekVault.Order calldata o = os[i];
-            if (o.kind != uint8(DuckWekVault.Kind.JOIN_ROOM) || o.roomKey != key) revert WrongOrder();
-            try this.chargeSelf(o, ps[i]) {
+        for (uint256 orderIndex; orderIndex < orderCount; ++orderIndex) {
+            DuckWekVault.Order calldata order = orders[orderIndex];
+            if (order.kind != uint8(DuckWekVault.Kind.JOIN_ROOM) || order.roomKey != roomKey) revert WrongOrder();
+
+            try this.chargeSelf(order, permits[orderIndex]) {
                 ++paid;
-                emit Joined(roomId, o.payer, o.loadout);
+                emit Joined(roomId, order.payer, order.loadout);
             } catch (bytes memory reason) {
-                emit JoinFailed(roomId, o.payer, reason);
+                emit JoinFailed(roomId, order.payer, reason);
             }
         }
-        r.players += paid;
+
+        room.players += paid;
     }
     // slither-disable-end reentrancy-no-eth,reentrancy-benign
     // slither-disable-end calls-loop
 
-    /// @dev External only so that `joinBatch` can try/catch one charge; callable by this contract alone.
-    function chargeSelf(DuckWekVault.Order calldata o, DuckWekVault.Permit calldata p) external {
+    function chargeSelf(DuckWekVault.Order calldata order, DuckWekVault.Permit calldata permit) external {
         require(msg.sender == address(this), "only self");
-        _charge(o, p);
+        _charge(order, permit);
     }
 
-    /// @notice Close joins, fix `startBlock` and the seed. `players` and `participantsRoot` are the operator's final
-    ///         participant list (humans plus bots; root over the ordered list; the order defines the duck index). Each leaf is
-    ///         `keccak256(abi.encode(address | botId, template, partBySlot))`. `engineVersion` names the engine build that
-    ///         replays the race.
-    function start(uint256 roomId, uint16 players, bytes32 participantsRoot, bytes32 engineVersion) external onlyOperator whenNotPaused {
-        Room storage r = rooms[roomId];
-        if (r.status != Status.Open) revert WrongStatus(r.status);
+    function start(uint256 roomId, uint16 players, bytes32 participantsRoot, bytes32 engineVersion)
+        external
+        onlyOperator
+        whenNotPaused
+    {
+        Room storage room = rooms[roomId];
+        if (room.status != Status.Open) revert WrongStatus(room.status);
+
         bytes32 seed = keccak256(abi.encode(block.prevrandao, keyOf[roomId], players));
-        r.status = Status.Started;
-        r.startBlock = uint32(block.number);
-        r.players = players;
-        r.seed = seed;
+        room.status = Status.Started;
+        room.startBlock = uint32(block.number);
+        room.players = players;
+        room.seed = seed;
         emit Started(roomId, uint32(block.number), players, participantsRoot, seed, engineVersion);
     }
 
-    /// @notice Record one race step. `n` is computed here from the block that includes this transaction.
     function tick(uint256 roomId) external onlyOperator whenNotPaused {
-        Room storage r = rooms[roomId];
-        if (r.status != Status.Started) revert WrongStatus(r.status);
-        emit Tick(roomId, uint32(block.number) - r.startBlock);
+        Room storage room = rooms[roomId];
+        if (room.status != Status.Started) revert WrongStatus(room.status);
+
+        emit Tick(roomId, uint32(block.number) - room.startBlock);
     }
 
-    // slither-disable-start reentrancy-no-eth,reentrancy-benign -- guarded by nonReentrant, operator only, and the only callees are the Vault, the Badge and the payment token deployed with this system
-    // slither-disable-start calls-loop -- a loop of 3 podium places, trusted Vault and Badge
-    /// @notice Close the race: record the standing root and podium, award first-time achievements.
-    /// @param podium ranks 1..3; address(0) where a bot finished (bots receive nothing). Every other entry must have paid
-    ///        its entry into this room (checked against the Vault).
+    // slither-disable-start reentrancy-no-eth,reentrancy-benign
+    // slither-disable-start calls-loop
     function finalize(uint256 roomId, bytes32 standingRoot, address[3] calldata podium)
         external
         onlyOperator
         whenNotPaused
         nonReentrant
     {
-        Room storage r = rooms[roomId];
-        if (r.status != Status.Started) revert WrongStatus(r.status);
+        Room storage room = rooms[roomId];
+        if (room.status != Status.Started) revert WrongStatus(room.status);
+
         if (
             (podium[0] != address(0) && (podium[0] == podium[1] || podium[0] == podium[2]))
                 || (podium[1] != address(0) && podium[1] == podium[2])
         ) revert DuplicatePodium();
 
-        r.status = Status.Finished;
-        r.endBlock = uint32(block.number);
-        r.standingRoot = standingRoot;
+        room.status = Status.Finished;
+        room.endBlock = uint32(block.number);
+        room.standingRoot = standingRoot;
 
-        bytes32 key = keyOf[roomId];
-        for (uint8 i; i < 3; ++i) {
-            address p = podium[i];
-            if (p == address(0)) continue;
-            if (!vault.joined(key, p)) revert NotInRoom(p);
-            uint8 bit = uint8(1) << i;
-            uint8 have = achieved[p];
-            if (have & bit != 0) continue; // already earned this kind: event only
-            achieved[p] = have | bit;
+        bytes32 roomKey = keyOf[roomId];
+        for (uint8 place; place < 3; ++place) {
+            address podiumPlayer = podium[place];
+            if (podiumPlayer == address(0)) continue;
+
+            if (!vault.joined(roomKey, podiumPlayer)) revert NotInRoom(podiumPlayer);
+
+            uint8 achievementBit = uint8(1) << place;
+            uint8 earnedBits = achieved[podiumPlayer];
+            if (earnedBits & achievementBit != 0) continue;
+
+            achieved[podiumPlayer] = earnedBits | achievementBit;
             // slither-disable-next-line unused-return
-            badge.award(p, bytes32(roomId), uint64(roomId), uint16(i + 1), r.trackId, _title(i)); // the token id is in the Locked event
-            emit AchievementAwarded(roomId, p, i);
+            badge.award(podiumPlayer, bytes32(roomId), uint64(roomId), uint16(place + 1), room.trackId, _title(place));
+            emit AchievementAwarded(roomId, podiumPlayer, place);
         }
+
         emit Finalized(roomId, standingRoot, uint32(block.number), podium);
     }
     // slither-disable-end reentrancy-no-eth,reentrancy-benign
     // slither-disable-end calls-loop
 
-    function _charge(DuckWekVault.Order calldata o, DuckWekVault.Permit calldata p) internal {
+    function _charge(DuckWekVault.Order calldata order, DuckWekVault.Permit calldata permit) internal {
         // slither-disable-start unused-return
-        if (p.deadline != 0) vault.permitAndSpend(o, p);
-        else vault.spend(o);
+        if (permit.deadline != 0) vault.permitAndSpend(order, permit);
+        else vault.spend(order);
         // slither-disable-end unused-return
     }
 
     function _title(uint8 kind) private pure returns (string memory) {
         if (kind == 0) return TITLE_WINNER;
+
         if (kind == 1) return TITLE_RUNNER_UP;
+
         return TITLE_THIRD;
     }
 }

@@ -7,7 +7,6 @@ class AuthNonce extends Model<InferAttributes<AuthNonce>, InferCreationAttribute
   declare nonce: string
   declare expires_at: Date
   declare used: CreationOptional<boolean>
-  // the session (plan §3.2): the permit the player signed once at connect
   declare permit_nonce: string | null
   declare deadline: string | null
   declare signature: string | null

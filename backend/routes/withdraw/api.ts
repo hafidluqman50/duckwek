@@ -5,7 +5,7 @@ import { IAuthRequest } from '@Interfaces/IAuthRequest'
 
 const withdrawRoute: Express = express()
 
-withdrawRoute.post('/prepare', [authCheck.handle], (req: IAuthRequest, res: Response): Promise<void> => withdrawController.prepare(req, res))
-withdrawRoute.post('/submit', [authCheck.handle], (req: IAuthRequest, res: Response): Promise<void> => withdrawController.submit(req, res))
+withdrawRoute.post('/prepare', [authCheck.handle], (request: IAuthRequest, response: Response): Promise<void> => withdrawController.prepare(request, response))
+withdrawRoute.post('/submit', [authCheck.handle], (request: IAuthRequest, response: Response): Promise<void> => withdrawController.submit(request, response))
 
 export default withdrawRoute

@@ -6,19 +6,13 @@ import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
 import {DuckWekRoles} from "./DuckWekRoles.sol";
 import {IPartRenderer, IRender} from "./render/IRender.sol";
 
-/// @title DuckWek part licence (ERC-721, v2). Each token is a permanent licence for one part type.
-/// @notice Plan 0013 §4.4. A part type is immutable: name, price, slot, colour and stats are written once. A price change
-///         is a new type. Stats live in an append-only registry of keys, so the engine can add a stat later without a
-///         contract change (an old type reads 0 for a key added after it). One licence per type per wallet.
-///         Primary sale goes through the Vault (85% creator / 15% protocol); platform parts are created with the protocol
-///         address as `creator`. Secondary sales carry a 5% ERC-2981 royalty to the creator.
 contract PartNFT is ERC721, ERC2981, DuckWekRoles {
     struct PartType {
         string name;
         address creator;
-        uint96 price; // USDC, 6 decimals
-        uint8 slot; // 0 Wings, 1 Tail, 2 Bill
-        uint24 color; // fill colour used by the NFT art
+        uint96 price;
+        uint8 slot;
+        uint24 color;
         bool platform;
         bool active;
     }
@@ -30,13 +24,13 @@ contract PartNFT is ERC721, ERC2981, DuckWekRoles {
     uint256 public constant MAX_NAME = 32;
 
     PartType[] internal _types;
-    bytes32[] public statKeys; // append-only
+    bytes32[] public statKeys;
     mapping(bytes32 => bool) public isStat;
     mapping(uint256 typeId => mapping(bytes32 key => int8)) internal _stat;
     mapping(uint256 tokenId => uint256 typeId) public typeOf;
-    mapping(address holder => mapping(uint256 typeId => uint256 tokenId)) public licenseOf; // 0 = none
+    mapping(address holder => mapping(uint256 typeId => uint256 tokenId)) public licenseOf;
     uint256 public nextId = 1;
-    address public minter; // the Vault, set once
+    address public minter;
     IPartRenderer public renderer;
     bool public rendererLocked;
 
@@ -67,12 +61,13 @@ contract PartNFT is ERC721, ERC2981, DuckWekRoles {
         _addStat("boost");
     }
 
-    // ---------------------------------------------------------------- admin
+    // ─── Admin ───
 
-    /// @notice Set once. A second call reverts, so the owner can never re-point minting.
     function setMinter(address minter_) external onlyOwner {
         if (minter_ == address(0)) revert ZeroAddress();
+
         if (minter != address(0)) revert MinterAlreadySet();
+
         minter = minter_;
         emit MinterSet(minter_);
     }
@@ -81,10 +76,11 @@ contract PartNFT is ERC721, ERC2981, DuckWekRoles {
         _addStat(key);
     }
 
-    function setRenderer(address r) external onlyOwner {
+    function setRenderer(address renderer_) external onlyOwner {
         if (rendererLocked) revert RendererIsLocked();
-        renderer = IPartRenderer(r);
-        emit RendererSet(r);
+
+        renderer = IPartRenderer(renderer_);
+        emit RendererSet(renderer_);
     }
 
     function lockRenderer() external onlyOwner {
@@ -99,7 +95,7 @@ contract PartNFT is ERC721, ERC2981, DuckWekRoles {
         emit StatAdded(key);
     }
 
-    // ---------------------------------------------------------------- catalog
+    // ─── Catalog ───
 
     function typeCount() external view returns (uint256) {
         return _types.length;
@@ -111,15 +107,16 @@ contract PartNFT is ERC721, ERC2981, DuckWekRoles {
 
     function partType(uint256 typeId) external view returns (PartType memory) {
         if (typeId >= _types.length) revert UnknownPart();
+
         return _types[typeId];
     }
 
     function statOf(uint256 typeId, bytes32 key) external view returns (int8) {
         if (typeId >= _types.length) revert UnknownPart();
+
         return _stat[typeId][key];
     }
 
-    /// @notice Platform part, created with `creator` (the protocol / treasury address) as its owner.
     function createPlatformPart(
         address creator,
         string calldata name,
@@ -132,7 +129,6 @@ contract PartNFT is ERC721, ERC2981, DuckWekRoles {
         return _createType(creator, name, price, slot, color, keys, values, true);
     }
 
-    /// @notice Creator part, published by the operator after review (the creator never needs MON).
     function createCreatorPart(
         address creator,
         string calldata name,
@@ -156,70 +152,87 @@ contract PartNFT is ERC721, ERC2981, DuckWekRoles {
         bool platform
     ) internal returns (uint256 typeId) {
         if (slot >= SLOTS) revert BadSlot();
+
         if (bytes(name).length == 0 || bytes(name).length > MAX_NAME) revert BadName();
+
         if (keys.length != values.length || keys.length == 0) revert BadStats();
+
         typeId = _types.length;
         int256 sum = 0;
-        for (uint256 i; i < keys.length; ++i) {
-            if (!isStat[keys[i]]) revert UnknownStat(keys[i]);
-            for (uint256 j; j < i; ++j) if (keys[j] == keys[i]) revert BadStats(); // no duplicate key
-            if (values[i] > MAX_STAT) revert BadStats();
-            sum += values[i];
-            _stat[typeId][keys[i]] = values[i];
+        for (uint256 keyIndex; keyIndex < keys.length; ++keyIndex) {
+            if (!isStat[keys[keyIndex]]) revert UnknownStat(keys[keyIndex]);
+
+            for (uint256 earlierKeyIndex; earlierKeyIndex < keyIndex; ++earlierKeyIndex) {
+                if (keys[earlierKeyIndex] == keys[keyIndex]) revert BadStats();
+            }
+
+            if (values[keyIndex] > MAX_STAT) revert BadStats();
+
+            sum += values[keyIndex];
+            _stat[typeId][keys[keyIndex]] = values[keyIndex];
         }
+
         if (sum > MAX_SUM) revert BadStats();
+
         _types.push(PartType(name, creator, price, slot, color, platform, true));
         emit PartTypeCreated(typeId, creator, platform, price, slot);
     }
 
-    /// @notice Discontinue or re-open a type. Platform part: owner. Creator part: its creator or the owner (moderation).
-    ///         Licences already sold stay valid; only new sales stop.
     function setActive(uint256 typeId, bool active) external {
         if (typeId >= _types.length) revert UnknownPart();
-        PartType storage t = _types[typeId];
-        bool allowed = msg.sender == owner() || (!t.platform && msg.sender == t.creator);
+
+        PartType storage part = _types[typeId];
+        bool allowed = msg.sender == owner() || (!part.platform && msg.sender == part.creator);
         if (!allowed) revert NotAllowed();
-        t.active = active;
+
+        part.active = active;
         emit PartActive(typeId, active);
     }
 
-    // ---------------------------------------------------------------- licences
+    // ─── Licences ───
 
-    function mintLicense(address to, uint256 typeId) external returns (uint256 id) {
+    function mintLicense(address to, uint256 typeId) external returns (uint256 tokenId) {
         if (msg.sender != minter) revert NotMinter();
+
         if (typeId >= _types.length || !_types[typeId].active) revert UnknownPart();
-        id = nextId++;
-        typeOf[id] = typeId;
-        _mint(to, id);
-        _setTokenRoyalty(id, _types[typeId].creator, ROYALTY_BPS);
-        emit PartLicensed(to, id, typeId);
+
+        tokenId = nextId++;
+        typeOf[tokenId] = typeId;
+        _mint(to, tokenId);
+        _setTokenRoyalty(tokenId, _types[typeId].creator, ROYALTY_BPS);
+        emit PartLicensed(to, tokenId, typeId);
     }
 
-    /// @dev One licence per type per wallet: minting or transferring into a holder of the same type reverts.
-    function _update(address to, uint256 id, address auth) internal override returns (address from) {
-        uint256 typeId = typeOf[id];
+    function _update(address to, uint256 tokenId, address auth) internal override returns (address from) {
+        uint256 typeId = typeOf[tokenId];
         if (to != address(0)) {
             if (licenseOf[to][typeId] != 0) revert AlreadyLicensed(to, typeId);
         }
-        from = super._update(to, id, auth);
+
+        from = super._update(to, tokenId, auth);
         if (from != address(0)) licenseOf[from][typeId] = 0;
-        if (to != address(0)) licenseOf[to][typeId] = id;
+
+        if (to != address(0)) licenseOf[to][typeId] = tokenId;
     }
 
-    // ---------------------------------------------------------------- art
+    // ─── Art ───
 
-    function tokenURI(uint256 id) public view override returns (string memory) {
-        _requireOwned(id);
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+        _requireOwned(tokenId);
         if (address(renderer) == address(0)) revert NoRenderer();
-        uint256 typeId = typeOf[id];
-        PartType memory p = _types[typeId];
-        uint256 n = statKeys.length;
-        int8[] memory values = new int8[](n);
-        for (uint256 i; i < n; ++i) values[i] = _stat[typeId][statKeys[i]];
-        return renderer.partURI(id, IRender.PartView(p.name, p.slot, p.color, statKeys, values));
+
+        uint256 typeId = typeOf[tokenId];
+        PartType memory part = _types[typeId];
+        uint256 keyCount = statKeys.length;
+        int8[] memory values = new int8[](keyCount);
+        for (uint256 keyIndex; keyIndex < keyCount; ++keyIndex) {
+            values[keyIndex] = _stat[typeId][statKeys[keyIndex]];
+        }
+
+        return renderer.partURI(tokenId, IRender.PartView(part.name, part.slot, part.color, statKeys, values));
     }
 
-    function supportsInterface(bytes4 id) public view override(ERC721, ERC2981) returns (bool) {
-        return super.supportsInterface(id);
+    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC2981) returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 }

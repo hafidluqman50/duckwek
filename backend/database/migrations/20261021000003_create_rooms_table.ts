@@ -1,10 +1,10 @@
 import { DataTypes } from 'sequelize'
 import type { Migration } from '../umzug'
 
-const ts = { created_at: { type: DataTypes.DATE, allowNull: false }, updated_at: { type: DataTypes.DATE, allowNull: false } }
+const timestamps = { created_at: { type: DataTypes.DATE, allowNull: false }, updated_at: { type: DataTypes.DATE, allowNull: false } }
 
-export const up: Migration = async ({ context: q }) => {
-  await q.createTable('rooms', {
+export const up: Migration = async ({ context: queryInterface }) => {
+  await queryInterface.createTable('rooms', {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     code: { type: DataTypes.STRING(12), allowNull: false, unique: true },
     room_key: { type: DataTypes.STRING(66), allowNull: false, unique: true },
@@ -15,9 +15,9 @@ export const up: Migration = async ({ context: q }) => {
     fill_bots: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     status: { type: DataTypes.STRING(16), allowNull: false, defaultValue: 'pending' },
     create_tx: { type: DataTypes.STRING(66), allowNull: true },
-    ...ts,
+    ...timestamps,
   })
-  await q.createTable('room_players', {
+  await queryInterface.createTable('room_players', {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     room_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'rooms', key: 'id' }, onDelete: 'CASCADE' },
     address: { type: DataTypes.STRING(42), allowNull: false },
@@ -29,12 +29,12 @@ export const up: Migration = async ({ context: q }) => {
     cosmetics: { type: DataTypes.JSONB, allowNull: false, defaultValue: { hat: false, shades: false, scarf: false } },
     locked: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     join_tx: { type: DataTypes.STRING(66), allowNull: true },
-    ...ts,
+    ...timestamps,
   })
-  await q.addIndex('room_players', ['room_id', 'address'], { unique: true })
+  await queryInterface.addIndex('room_players', ['room_id', 'address'], { unique: true })
 }
 
-export const down: Migration = async ({ context: q }) => {
-  await q.dropTable('room_players')
-  await q.dropTable('rooms')
+export const down: Migration = async ({ context: queryInterface }) => {
+  await queryInterface.dropTable('room_players')
+  await queryInterface.dropTable('rooms')
 }

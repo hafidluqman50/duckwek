@@ -6,14 +6,15 @@ import { sequelize } from '../config/database'
 
 export type Migration = (params: { context: QueryInterface }) => Promise<void>
 
-const make = (glob: string, table: string) =>
+const createUmzug = (glob: string, table: string) =>
   new Umzug({
     migrations: {
       glob: path.join(__dirname, glob),
-      resolve: ({ name, path: p, context }) => {
+      resolve: ({ name, path: migrationPath, context }) => {
         // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const m = require(p as string)
-        return { name, up: async () => m.up({ context }), down: async () => m.down({ context }) }
+        const migration = require(migrationPath as string)
+
+        return { name, up: async () => migration.up({ context }), down: async () => migration.down({ context }) }
       },
     },
     context: sequelize.getQueryInterface(),
@@ -21,5 +22,5 @@ const make = (glob: string, table: string) =>
     logger: console,
   })
 
-export const migrator = make('migrations/*.{ts,js}', 'sequelize_meta')
-export const seeder = make('seeders/*.{ts,js}', 'sequelize_seeds')
+export const migrator = createUmzug('migrations/*.{ts,js}', 'sequelize_meta')
+export const seeder = createUmzug('seeders/*.{ts,js}', 'sequelize_seeds')

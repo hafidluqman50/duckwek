@@ -9,10 +9,6 @@ export interface Cosmetics {
 }
 export type DuckStatus = 'egg' | 'hatched'
 
-/**
- * The duck IS the player profile (one per wallet), off-chain only (plan 0013 D2: no Duck NFT). It is an "egg" until the wallet
- * finishes its first paid race; "hatched" is just that moment, shown in the UI.
- */
 class Duck extends Model<InferAttributes<Duck>, InferCreationAttributes<Duck>> {
   declare id: CreationOptional<number>
   declare address: string

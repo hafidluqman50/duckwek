@@ -38,14 +38,14 @@ export function Hero() {
         <div className="relative flex flex-col gap-2.5 overflow-hidden rounded-[26px] border-[5px] border-black bg-monad py-3 pl-12 pr-10 shadow-[0_10px_0_#000] md:rounded-[36px] md:border-[6px] md:py-[22px] md:pl-[70px] md:pr-[70px] md:shadow-[0_14px_0_#000]">
           <div aria-hidden="true" className="absolute inset-y-0 right-0 w-[30px] border-l-[5px] border-black bg-[repeating-conic-gradient(#ffffff_0_25%,#1E1446_0_50%)] bg-[length:15px_15px] md:w-[46px] md:bg-[length:23px_23px]" />
           <DemoStep />
-          {LANES.map((d) => (
-            <div key={d.name} className="relative h-[52px] border-b-[3px] border-dashed border-ink md:h-[74px]">
-              <div data-hero-duck className="absolute bottom-1 w-[58px] md:w-24" style={{ left: d.left }}>
-                <div style={{ animation: `dwBob ${d.bob} ease-in-out infinite` }}>
-                  <MiniDuck color={d.color} width="100%" />
+          {LANES.map((lane) => (
+            <div key={lane.name} className="relative h-[52px] border-b-[3px] border-dashed border-ink md:h-[74px]">
+              <div data-hero-duck className="absolute bottom-1 w-[58px] md:w-24" style={{ left: lane.left }}>
+                <div style={{ animation: `dwBob ${lane.bob} ease-in-out infinite` }}>
+                  <MiniDuck color={lane.color} width="100%" />
                 </div>
               </div>
-              <span className="absolute left-0 top-1.5 rounded-full border-[3px] border-black bg-white px-2.5 text-[13px] font-black text-ink">{d.name}</span>
+              <span className="absolute left-0 top-1.5 rounded-full border-[3px] border-black bg-white px-2.5 text-[13px] font-black text-ink">{lane.name}</span>
             </div>
           ))}
         </div>

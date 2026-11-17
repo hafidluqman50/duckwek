@@ -24,9 +24,9 @@ class Race extends Model<InferAttributes<Race>, InferCreationAttributes<Race>> {
   declare cheers_root: string | null
   declare settle_tx: string | null
   declare start_tx: string | null
-  declare engine_version: string | null // the engine build that replays this race (committed at start)
+  declare engine_version: string | null
   declare participants_root: string | null
-  declare layout_version: number | null // the circuit layout version the room was created on
+  declare layout_version: number | null
   declare status: 'running' | 'settling' | 'settled' | 'failed'
   declare created_at: CreationOptional<Date>
   declare updated_at: CreationOptional<Date>

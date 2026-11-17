@@ -12,13 +12,15 @@ export class AuthNonceRequest {
   public validator(): void {
     const validationScheme = Joi.object({ address: Joi.string().pattern(/^0x[0-9a-fA-F]{40}$/).required() })
     const { error } = validationScheme.validate(this.request, { abortEarly: false })
+
     if (error) {
-      throw new BadRequestException('Error Validation', { validations: error.details.map((x) => x.message) })
+      throw new BadRequestException('Error Validation', { validations: error.details.map((detail) => detail.message) })
     }
   }
 
   public toDTO(): AuthNonceDTO {
     this.validator()
+
     return new AuthNonceDTO(this.request as any)
   }
 }

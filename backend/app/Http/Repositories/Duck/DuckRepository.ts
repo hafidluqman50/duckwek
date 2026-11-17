@@ -7,10 +7,12 @@ export class DuckRepository {
     return Duck.findOne({ where: { address } })
   }
 
-  public async upsert(address: string, data: Partial<Duck>): Promise<Duck> {
+  public async upsert(address: string, attributes: Partial<Duck>): Promise<Duck> {
     const existing = await this.byAddress(address)
-    if (existing) return existing.update(data)
-    return Duck.create({ address, ...(data as any) })
+
+    if (existing) return existing.update(attributes)
+
+    return Duck.create({ address, ...(attributes as any) })
   }
 
   public async titles(address: string): Promise<Title[]> {

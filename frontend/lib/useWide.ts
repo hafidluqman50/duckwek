@@ -2,17 +2,18 @@
 
 import { useSyncExternalStore } from 'react'
 
-const Q = '(min-width: 1024px)'
+const WIDE_QUERY = '(min-width: 1024px)'
 
-/** True at >= 1024px: the laptop layout of /play (plan 0014 §3.2). Below it nothing changes. */
 export function useWide(): boolean {
   return useSyncExternalStore(
-    (cb) => {
-      const m = window.matchMedia(Q)
-      m.addEventListener('change', cb)
-      return () => m.removeEventListener('change', cb)
+    (onChange) => {
+      const mediaQuery = window.matchMedia(WIDE_QUERY)
+
+      mediaQuery.addEventListener('change', onChange)
+
+      return () => mediaQuery.removeEventListener('change', onChange)
     },
-    () => window.matchMedia(Q).matches,
+    () => window.matchMedia(WIDE_QUERY).matches,
     () => false,
   )
 }

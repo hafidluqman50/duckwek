@@ -10,31 +10,33 @@ export class RoomController extends BaseController {
     super()
   }
 
-  public async show(req: Request, res: Response): Promise<void> {
+  public async show(request: Request, response: Response): Promise<void> {
     try {
-      const code = String(req.params.code).toUpperCase()
+      const code = String(request.params.code).toUpperCase()
       const state = await this.roomService.state(code, this.raceService.status(code))
-      this.ok(res, 'Success Get Room!', { ...state, lastResult: this.raceService.lastResult(code) })
-    } catch (e) {
-      this.fail(res, e)
+
+      this.ok(response, 'Success Get Room!', { ...state, lastResult: this.raceService.lastResult(code) })
+    } catch (error) {
+      this.fail(response, error)
     }
   }
 
-  public async loadout(req: IAuthRequest, res: Response): Promise<void> {
+  public async loadout(request: IAuthRequest, response: Response): Promise<void> {
     try {
-      const dto = new LoadoutRequest({ address: req.address!, roomCode: String(req.params.code), partTypeId: req.body.partTypeId ?? null }).toDTO()
-      await this.roomService.setLoadout(dto)
-      this.ok(res, 'Loadout saved', { partTypeId: dto.partTypeId })
-    } catch (e) {
-      this.fail(res, e)
+      const loadoutInput = new LoadoutRequest({ address: request.address!, roomCode: String(request.params.code), partTypeId: request.body.partTypeId ?? null }).toDTO()
+      await this.roomService.setLoadout(loadoutInput)
+
+      this.ok(response, 'Loadout saved', { partTypeId: loadoutInput.partTypeId })
+    } catch (error) {
+      this.fail(response, error)
     }
   }
 
-  public async start(req: IAuthRequest, res: Response): Promise<void> {
+  public async start(request: IAuthRequest, response: Response): Promise<void> {
     try {
-      this.ok(res, 'Race starting', await this.raceService.start(String(req.params.code).toUpperCase(), req.address!))
-    } catch (e) {
-      this.fail(res, e)
+      this.ok(response, 'Race starting', await this.raceService.start(String(request.params.code).toUpperCase(), request.address!))
+    } catch (error) {
+      this.fail(response, error)
     }
   }
 }

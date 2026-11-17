@@ -5,9 +5,6 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {IBadgeRenderer, IRender, ITrackNames} from "./render/IRender.sol";
 
-/// @title DuckWek title badge (v2). Soulbound (ERC-5192): free, only won, never bought or sold.
-/// @notice `minter` (the Race) is set once, so the owner can never mint a title. The picture is drawn by the renderer from
-///         the title's own traits (rank, race, track, winner).
 contract Badge is ERC721, Ownable2Step {
     struct Title {
         bytes32 roomKey;
@@ -19,7 +16,7 @@ contract Badge is ERC721, Ownable2Step {
 
     mapping(uint256 => Title) public titles;
     uint256 public nextId = 1;
-    address public minter; // DuckWekRace, set once
+    address public minter;
     ITrackNames public immutable tracks;
     IBadgeRenderer public renderer;
     bool public rendererLocked;
@@ -42,15 +39,18 @@ contract Badge is ERC721, Ownable2Step {
 
     function setMinter(address minter_) external onlyOwner {
         if (minter_ == address(0)) revert ZeroAddress();
+
         if (minter != address(0)) revert MinterAlreadySet();
+
         minter = minter_;
         emit MinterSet(minter_);
     }
 
-    function setRenderer(address r) external onlyOwner {
+    function setRenderer(address renderer_) external onlyOwner {
         if (rendererLocked) revert RendererIsLocked();
-        renderer = IBadgeRenderer(r);
-        emit RendererSet(r);
+
+        renderer = IBadgeRenderer(renderer_);
+        emit RendererSet(renderer_);
     }
 
     function lockRenderer() external onlyOwner {
@@ -60,34 +60,42 @@ contract Badge is ERC721, Ownable2Step {
 
     function award(address to, bytes32 roomKey, uint64 raceId, uint16 rank, uint64 trackId, string calldata title)
         external
-        returns (uint256 id)
+        returns (uint256 tokenId)
     {
         if (msg.sender != minter) revert NotMinter();
-        id = nextId++;
-        titles[id] = Title(roomKey, raceId, rank, trackId, title);
-        _mint(to, id);
-        emit Locked(id);
+
+        tokenId = nextId++;
+        titles[tokenId] = Title(roomKey, raceId, rank, trackId, title);
+        _mint(to, tokenId);
+        emit Locked(tokenId);
     }
 
-    function locked(uint256 id) external view returns (bool) {
-        _requireOwned(id);
+    function locked(uint256 tokenId) external view returns (bool) {
+        _requireOwned(tokenId);
         return true;
     }
 
-    function _update(address to, uint256 id, address auth) internal override returns (address) {
-        address from = _ownerOf(id);
+    function _update(address to, uint256 tokenId, address auth) internal override returns (address) {
+        address from = _ownerOf(tokenId);
         if (from != address(0) && to != address(0)) revert Soulbound();
-        return super._update(to, id, auth);
+
+        return super._update(to, tokenId, auth);
     }
 
-    function tokenURI(uint256 id) public view override returns (string memory) {
-        address winner = _requireOwned(id);
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+        address winner = _requireOwned(tokenId);
         if (address(renderer) == address(0)) revert NoRenderer();
-        Title memory t = titles[id];
-        return renderer.badgeURI(id, IRender.TitleView(t.title, t.raceId, t.rank, tracks.nameOf(t.trackId), winner));
+
+        Title memory earnedTitle = titles[tokenId];
+        return renderer.badgeURI(
+            tokenId,
+            IRender.TitleView(
+                earnedTitle.title, earnedTitle.raceId, earnedTitle.rank, tracks.nameOf(earnedTitle.trackId), winner
+            )
+        );
     }
 
-    function supportsInterface(bytes4 id) public view override returns (bool) {
-        return id == 0xb45a3c0e || super.supportsInterface(id);
+    function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
+        return interfaceId == 0xb45a3c0e || super.supportsInterface(interfaceId);
     }
 }

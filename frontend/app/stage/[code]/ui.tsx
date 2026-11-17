@@ -3,223 +3,272 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import { useRoomLive } from '@/lib/useRoomLive'
-import { buildTrack, pointAt, uOf, TURNS, type TrackGeo } from '@/lib/track'
+import { buildTrackGeometry, pointAtFraction, pathFractionAt, TURNS, type TrackGeo } from '@/lib/track'
 import type { GridEntrant } from '@/lib/types'
 import { DuckSvg, MiniDuck } from '@/components/duck/DuckSvg'
 import { sound } from '@/lib/sound'
 import { APP_URL } from '@/lib/config'
 import { SoundButton } from '@/components/play/Shell'
-import { spriteOf } from '@/components/stage/sprites'
-import { MotoGrid, GridMinimap, hasFlyover } from '@/components/stage/MotoGrid'
+import { spriteForColor } from '@/components/stage/sprites'
+import { MotoGrid, GridMinimap, needsGridFlyover } from '@/components/stage/MotoGrid'
 
-// Projector (1920x1080, scaled to the screen). Every number below comes from the stage section of Prototype3.dc.html.
-const W = 1920, H = 1080
+const STAGE_WIDTH = 1920, STAGE_HEIGHT = 1080
 const DISPLAY = "'Lilita One', sans-serif"
 const MONO = "'JetBrains Mono', monospace"
 const CHECKER = 'repeating-conic-gradient(#ffffff 0 25%, #000000 0 50%)'
 
-function useFit() {
-  const [s, setS] = useState(0.5)
+function useFitScale() {
+  const [scale, setScale] = useState(0.5)
+
   useEffect(() => {
-    const f = () => setS(Math.min(window.innerWidth / W, window.innerHeight / H))
-    f()
-    window.addEventListener('resize', f)
-    return () => window.removeEventListener('resize', f)
+    const updateScale = () => setScale(Math.min(window.innerWidth / STAGE_WIDTH, window.innerHeight / STAGE_HEIGHT))
+    updateScale()
+    window.addEventListener('resize', updateScale)
+
+    return () => window.removeEventListener('resize', updateScale)
   }, [])
-  return s
+
+  return scale
 }
 
 const CONFETTI_COLORS = ['#FFC93C', '#ffffff', '#FF7AB6', '#4ED1C5', '#1E1446', '#B8F35A']
-const CONFETTI = Array.from({ length: 30 }, (_, j) => ({ x: (j * 263) % 1900, w: 18 + (j % 3) * 10, c: CONFETTI_COLORS[j % CONFETTI_COLORS.length], d: (2.6 + (j % 5) * 0.5).toFixed(1), dl: ((j * 0.37) % 3).toFixed(2) }))
-const RAYS = Array.from({ length: 16 }, (_, q) => {
-  const a0 = (q / 16) * Math.PI * 2, a1 = a0 + Math.PI / 16
-  return `M960 420 L${Math.round(960 + 2200 * Math.cos(a0))} ${Math.round(420 + 2200 * Math.sin(a0))} L${Math.round(960 + 2200 * Math.cos(a1))} ${Math.round(420 + 2200 * Math.sin(a1))} Z`
+const CONFETTI = Array.from({ length: 30 }, (_, index) => ({ left: (index * 263) % 1900, width: 18 + (index % 3) * 10, color: CONFETTI_COLORS[index % CONFETTI_COLORS.length], duration: (2.6 + (index % 5) * 0.5).toFixed(1), delay: ((index * 0.37) % 3).toFixed(2) }))
+const RAYS = Array.from({ length: 16 }, (_, index) => {
+  const startAngle = (index / 16) * Math.PI * 2, endAngle = startAngle + Math.PI / 16
+
+  return `M960 420 L${Math.round(960 + 2200 * Math.cos(startAngle))} ${Math.round(420 + 2200 * Math.sin(startAngle))} L${Math.round(960 + 2200 * Math.cos(endAngle))} ${Math.round(420 + 2200 * Math.sin(endAngle))} Z`
 }).join(' ')
-const LETTERS_A = 'ABSOLUTE'.split('').map((c, i) => ({ c, d: (0.35 + i * 0.07).toFixed(2), w: (1.2 + i * 0.09).toFixed(2) }))
-const LETTERS_B = 'MARVELOUS'.split('').map((c, i) => ({ c, d: (0.95 + i * 0.07).toFixed(2), w: (1.9 + i * 0.09).toFixed(2) }))
-const PHOTO_SPECS = [{ w: 460, t: 340, beak: 1135 }, { w: 380, t: 180, beak: 1060 }, { w: 300, t: 40, beak: 980 }]
-const PODIUM = { h: [230, 150, 100], dw: [220, 150, 130], dl: [1.5, 1.7, 1.9], bob: [0.9, 1.3, 1.5] }
+const LETTERS_FIRST_LINE = 'ABSOLUTE'.split('').map((character, index) => ({ character, popDelay: (0.35 + index * 0.07).toFixed(2), waveDelay: (1.2 + index * 0.09).toFixed(2) }))
+const LETTERS_SECOND_LINE = 'MARVELOUS'.split('').map((character, index) => ({ character, popDelay: (0.95 + index * 0.07).toFixed(2), waveDelay: (1.9 + index * 0.09).toFixed(2) }))
+const PHOTO_SPECS = [{ width: 460, top: 340, beak: 1135 }, { width: 380, top: 180, beak: 1060 }, { width: 300, top: 40, beak: 980 }]
+const PODIUM = { height: [230, 150, 100], duckWidth: [220, 150, 130], delay: [1.5, 1.7, 1.9], bob: [0.9, 1.3, 1.5] }
 
-const pill = (bg: string, fg: string): React.CSSProperties => ({ padding: '3px 10px', border: '3px solid #000000', borderRadius: 999, fontSize: 18, fontWeight: 800, background: bg, color: fg })
-const letter = (color: string, shadow: number): React.CSSProperties => ({ display: 'inline-block', fontFamily: DISPLAY, fontSize: 190, lineHeight: 0.95, color, WebkitTextStroke: '10px #000000', paintOrder: 'stroke fill', textShadow: `0 ${shadow}px 0 #000000` })
+const pill = (background: string, color: string): React.CSSProperties => ({ padding: '3px 10px', border: '3px solid #000000', borderRadius: 999, fontSize: 18, fontWeight: 800, background, color })
+const letterStyle = (color: string, shadow: number): React.CSSProperties => ({ display: 'inline-block', fontFamily: DISPLAY, fontSize: 190, lineHeight: 0.95, color, WebkitTextStroke: '10px #000000', paintOrder: 'stroke fill', textShadow: `0 ${shadow}px 0 #000000` })
 
-// ---- smooth movement ------------------------------------------------------------------------------------------------
-// Positions arrive once per tick, unevenly (about every 0.3 to 0.7 s, sometimes two steps at once). Drawing them as they come made the
-// ducks move and then wait. The projector therefore plays the race back a little behind the chain: it keeps the ticks it received,
-// measured in race steps, and moves a playback position through them at the speed steps really arrive, interpolating linearly between
-// two ticks. A controller nudges that speed (at most -50 % / +35 %) to stay LAG_STEPS behind the newest tick, so a late tick does not
-// stall the ducks and an early one does not make them jump. Frames update the elements directly, not React state.
 const LAG_STEPS = 3
 const STEP_MS = 300
-const KEEP = 14
+const KEPT_SAMPLES = 14
 
-interface Sample { n: number; p: Float64Array }
+interface Sample { step: number; positions: Float64Array }
 
-// The ducks are drawn on ONE canvas. 200 SVG elements, each with its own animation and compositor layer, plus a React render of all of
-// them at every tick, dropped the frame rate to about 40 fps with frames of 80 to 170 ms exactly when a tick arrived (measured with
-// __tests__/stage/perf.mjs). A canvas draws 200 ducks in about a millisecond and nothing in React touches them between ticks.
-function RaceLayer({ geo, ents, p, n, en, big, top3 }: { geo: TrackGeo; ents: GridEntrant[]; p: number[]; n: number; en: number[]; big: boolean; top3: { i: number; label: string }[] }) {
+function RaceLayer({ geometry, entrants, positions, step, energies, isCrowded, topThree }: { geometry: TrackGeo; entrants: GridEntrant[]; positions: number[]; step: number; energies: number[]; isCrowded: boolean; topThree: { index: number; label: string }[] }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const tagEls = useRef(new Map<number, HTMLDivElement>())
-  const pb = useRef({ samples: [] as Sample[], play: 0, stepMs: STEP_MS, at: 0 })
-  const energy = useRef<number[]>([])
-  const w = big ? 30 : 38
-
-  useEffect(() => { energy.current = en }, [en])
+  const tagElements = useRef(new Map<number, HTMLDivElement>())
+  const playback = useRef({ samples: [] as Sample[], position: 0, stepMs: STEP_MS, receivedAt: 0 })
+  const energyRef = useRef<number[]>([])
+  const duckWidth = isCrowded ? 30 : 38
 
   useEffect(() => {
-    const b = pb.current
+    energyRef.current = energies
+  }, [energies])
+
+  useEffect(() => {
+    const state = playback.current
     const now = performance.now()
-    const last = b.samples[b.samples.length - 1]
-    if (last && n <= last.n) return // a tick that landed late: that step is already known
-    if (!last) b.play = Math.max(0, n - LAG_STEPS)
+    const last = state.samples[state.samples.length - 1]
+
+    if (last && step <= last.step) return
+
+    if (!last) state.position = Math.max(0, step - LAG_STEPS)
     else {
-      const gap = (now - b.at) / (n - last.n) // how often a step really arrives
-      if (gap > 80 && gap < 1500) b.stepMs = b.stepMs * 0.7 + gap * 0.3
+      const gap = (now - state.receivedAt) / (step - last.step)
+
+      if (gap > 80 && gap < 1500) state.stepMs = state.stepMs * 0.7 + gap * 0.3
     }
-    b.samples.push({ n, p: Float64Array.from(p) })
-    if (b.samples.length > KEEP) b.samples.shift()
-    b.at = now
-  }, [p, n])
+
+    state.samples.push({ step, positions: Float64Array.from(positions) })
+
+    if (state.samples.length > KEPT_SAMPLES) state.samples.shift()
+
+    state.receivedAt = now
+  }, [positions, step])
 
   useEffect(() => {
     const canvas = canvasRef.current
+
     if (!canvas) return
-    const ctx = canvas.getContext('2d')!
-    let raf = 0
-    let prev = performance.now()
-    let px = 1 // canvas pixels per design pixel (the stage is scaled to the screen)
-    const fit = () => {
-      const r = canvas.getBoundingClientRect()
-      px = Math.max(0.25, (r.width / W) * (window.devicePixelRatio || 1))
-      canvas.width = Math.round(W * px)
-      canvas.height = Math.round(H * px)
+
+    const context = canvas.getContext('2d')!
+    let animationFrame = 0
+    let previousFrameAt = performance.now()
+    let pixelsPerDesignPixel = 1
+
+    const fitCanvas = () => {
+      const bounds = canvas.getBoundingClientRect()
+      pixelsPerDesignPixel = Math.max(0.25, (bounds.width / STAGE_WIDTH) * (window.devicePixelRatio || 1))
+      canvas.width = Math.round(STAGE_WIDTH * pixelsPerDesignPixel)
+      canvas.height = Math.round(STAGE_HEIGHT * pixelsPerDesignPixel)
     }
-    fit()
-    const ro = new ResizeObserver(fit)
-    ro.observe(canvas)
-    const items: { x: number; y: number; flip: boolean; color: string; boosted: boolean; phase: number }[] = ents.map((e, k) => ({ x: 0, y: 0, flip: false, color: e.color, boosted: false, phase: (k * 37) % 45 / 100 }))
+
+    fitCanvas()
+    const resizeObserver = new ResizeObserver(fitCanvas)
+    resizeObserver.observe(canvas)
+    const items: { x: number; y: number; flip: boolean; color: string; boosted: boolean; phase: number }[] = entrants.map((entrant, entrantIndex) => ({ x: 0, y: 0, flip: false, color: entrant.color, boosted: false, phase: (entrantIndex * 37) % 45 / 100 }))
+
     const frame = (now: number) => {
-      const b = pb.current
-      const dt = Math.min(100, now - prev)
-      prev = now
-      const sm = b.samples
-      if (sm.length) {
-        const latest = sm[sm.length - 1].n
-        const speed = 1 + Math.max(-0.5, Math.min(0.35, (latest - LAG_STEPS - b.play) * 0.3))
-        b.play = Math.min(latest, b.play + (dt / b.stepMs) * speed)
-        // the two ticks around the playback position (before the first one, ducks come from the line)
-        let hi = sm.length - 1
-        while (hi > 0 && sm[hi - 1].n >= b.play) hi--
-        const B = sm[hi]
-        const A = hi > 0 ? sm[hi - 1] : null
-        const f = A ? (b.play - A.n) / (B.n - A.n) : B.n > 0 ? b.play / B.n : 1
-        const en = energy.current
-        ents.forEach((e, k) => {
-          const i = e.i
-          if (i >= B.p.length) return
-          const a = A ? A.p[i] : 0
-          const v = a + (B.p[i] - a) * Math.max(0, Math.min(1, f))
-          const lat = e.human ? ((i * 29) % 30) - 15 : ((i * 53) % 70) - 35
-          const pt = pointAt(geo, uOf(geo, v / 10000), lat)
-          const it = items[k]
-          it.x = pt.x
-          it.y = pt.y
-          it.flip = pt.dx < 0
-          it.boosted = e.human && (en[i] ?? 0) > 25
-          const tg = tagEls.current.get(i)
-          if (tg) tg.style.transform = `translate3d(${(pt.x - 30).toFixed(1)}px, ${(pt.y - w * 0.62 - 42).toFixed(1)}px, 0)`
+      const state = playback.current
+      const elapsed = Math.min(100, now - previousFrameAt)
+      previousFrameAt = now
+      const samples = state.samples
+
+      if (samples.length) {
+        const latest = samples[samples.length - 1].step
+        const speed = 1 + Math.max(-0.5, Math.min(0.35, (latest - LAG_STEPS - state.position) * 0.3))
+        state.position = Math.min(latest, state.position + (elapsed / state.stepMs) * speed)
+        let upperIndex = samples.length - 1
+
+        while (upperIndex > 0 && samples[upperIndex - 1].step >= state.position) upperIndex--
+
+        const upper = samples[upperIndex]
+        const lower = upperIndex > 0 ? samples[upperIndex - 1] : null
+        const fraction = lower ? (state.position - lower.step) / (upper.step - lower.step) : upper.step > 0 ? state.position / upper.step : 1
+        const currentEnergies = energyRef.current
+
+        entrants.forEach((entrant, itemIndex) => {
+          const gridIndex = entrant.i
+
+          if (gridIndex >= upper.positions.length) return
+
+          const from = lower ? lower.positions[gridIndex] : 0
+          const progress = from + (upper.positions[gridIndex] - from) * Math.max(0, Math.min(1, fraction))
+          const lateral = entrant.human ? ((gridIndex * 29) % 30) - 15 : ((gridIndex * 53) % 70) - 35
+          const point = pointAtFraction(geometry, pathFractionAt(geometry, progress / 10000), lateral)
+          const item = items[itemIndex]
+          item.x = point.x
+          item.y = point.y
+          item.flip = point.dx < 0
+          item.boosted = entrant.human && (currentEnergies[gridIndex] ?? 0) > 25
+          const tagElement = tagElements.current.get(gridIndex)
+
+          if (tagElement) tagElement.style.transform = `translate3d(${(point.x - 30).toFixed(1)}px, ${(point.y - duckWidth * 0.62 - 42).toFixed(1)}px, 0)`
         })
       }
-      // draw: lower on the screen is in front; a cheered human duck is bigger and glows
-      ctx.setTransform(1, 0, 0, 1, 0, 0)
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-      const order = items.map((_, k) => k).sort((a, b2) => items[a].y - items[b2].y)
-      for (const k of order) {
-        const it = items[k]
-        if (it.x === 0 && it.y === 0) continue
-        const size = it.boosted ? w * 1.45 : w
-        const bob = Math.sin((now / 1000 + it.phase) * Math.PI * 2 / 0.45) // the same 0.45 s rocking as before
-        ctx.setTransform(px, 0, 0, px, 0, 0)
-        ctx.translate(it.x, it.y - bob * 2)
-        ctx.rotate((bob * 4 * Math.PI) / 180)
-        if (it.flip) ctx.scale(-1, 1)
-        if (it.boosted) {
-          ctx.shadowColor = '#FFC93C'
-          ctx.shadowBlur = 18 * px
-        } else ctx.shadowBlur = 0
-        ctx.drawImage(spriteOf(it.color), -size / 2, -size * 0.62, size, size * (100 / 120))
-      }
-      raf = requestAnimationFrame(frame)
-    }
-    raf = requestAnimationFrame(frame)
-    return () => {
-      cancelAnimationFrame(raf)
-      ro.disconnect()
-    }
-  }, [geo, ents, w])
 
-  const away = 'translate3d(-300px, -300px, 0)'
+      context.setTransform(1, 0, 0, 1, 0, 0)
+      context.clearRect(0, 0, canvas.width, canvas.height)
+      const drawOrder = items.map((_, itemIndex) => itemIndex).sort((first, second) => items[first].y - items[second].y)
+
+      for (const itemIndex of drawOrder) {
+        const item = items[itemIndex]
+
+        if (item.x === 0 && item.y === 0) continue
+
+        const size = item.boosted ? duckWidth * 1.45 : duckWidth
+        const bob = Math.sin((now / 1000 + item.phase) * Math.PI * 2 / 0.45)
+        context.setTransform(pixelsPerDesignPixel, 0, 0, pixelsPerDesignPixel, 0, 0)
+        context.translate(item.x, item.y - bob * 2)
+        context.rotate((bob * 4 * Math.PI) / 180)
+
+        if (item.flip) context.scale(-1, 1)
+
+        if (item.boosted) {
+          context.shadowColor = '#FFC93C'
+          context.shadowBlur = 18 * pixelsPerDesignPixel
+        } else context.shadowBlur = 0
+
+        context.drawImage(spriteForColor(item.color), -size / 2, -size * 0.62, size, size * (100 / 120))
+      }
+
+      animationFrame = requestAnimationFrame(frame)
+    }
+
+    animationFrame = requestAnimationFrame(frame)
+
+    return () => {
+      cancelAnimationFrame(animationFrame)
+      resizeObserver.disconnect()
+    }
+  }, [geometry, entrants, duckWidth])
+
+  const offScreen = 'translate3d(-300px, -300px, 0)'
+
   return (
     <>
-      <canvas ref={canvasRef} data-ducks aria-hidden style={{ position: 'absolute', left: 0, top: 0, width: W, height: H }} />
-      {top3.map((t) => (
-        <div key={'t' + t.i} ref={(el) => { if (el) tagEls.current.set(t.i, el); else tagEls.current.delete(t.i) }} style={{ position: 'absolute', left: 0, top: 0, zIndex: 2000, padding: '4px 12px', border: '4px solid #000000', borderRadius: 999, fontSize: 20, fontWeight: 900, whiteSpace: 'nowrap', background: '#ffffff', color: '#1E1446', transform: away, willChange: 'transform' }}>{t.label}</div>
+      <canvas ref={canvasRef} data-ducks aria-hidden style={{ position: 'absolute', left: 0, top: 0, width: STAGE_WIDTH, height: STAGE_HEIGHT }} />
+      {topThree.map((leader) => (
+        <div key={'t' + leader.index} ref={(element) => { if (element) tagElements.current.set(leader.index, element); else tagElements.current.delete(leader.index) }} style={{ position: 'absolute', left: 0, top: 0, zIndex: 2000, padding: '4px 12px', border: '4px solid #000000', borderRadius: 999, fontSize: 20, fontWeight: 900, whiteSpace: 'nowrap', background: '#ffffff', color: '#1E1446', transform: offScreen, willChange: 'transform' }}>{leader.label}</div>
       ))}
     </>
   )
 }
 
 export function StagePage({ code }: { code: string }) {
-  const scale = useFit()
+  const scale = useFitScale()
   const live = useRoomLive(code, { photoMs: 3200 })
   const { room, grid, tick, phase, result, settled, countdown } = live
-  const [qr, setQr] = useState('')
+  const [qrDataUrl, setQrDataUrl] = useState('')
   const [armed, setArmed] = useState(false)
   const [photoGo, setPhotoGo] = useState(false)
-  const camRef = useRef<HTMLDivElement | null>(null)
+  const cameraRef = useRef<HTMLDivElement | null>(null)
   const joinUrl = `${APP_URL || (typeof window !== 'undefined' ? window.location.origin : '')}/join/${code}`
 
   useEffect(() => {
-    QRCode.toDataURL(joinUrl, { margin: 1, width: 420, color: { dark: '#1E1446', light: '#ffffff' } }).then(setQr).catch(() => undefined)
+    QRCode.toDataURL(joinUrl, { margin: 1, width: 420, color: { dark: '#1E1446', light: '#ffffff' } }).then(setQrDataUrl).catch(() => undefined)
   }, [joinUrl])
 
-  const geo = useMemo(() => (room ? buildTrack(room.track.path, room.track.closed, room.track.laps, TURNS[room.track.slug] || []) : null), [room])
+  const geometry = useMemo(() => (room ? buildTrackGeometry(room.track.path, room.track.closed, room.track.laps, TURNS[room.track.slug] || []) : null), [room])
 
-  // Projector sound is louder and owns the music
-  useEffect(() => { sound.setVolume(0.9) }, [])
-  useEffect(() => { sound.music(phase === 'race' ? 'race' : phase === 'idle' ? 'lobby' : null) }, [phase, armed])
-  useEffect(() => { if (phase === 'countdown') sound.play(countdown > 0 ? 'beep' : 'go') }, [phase, countdown])
-  const prev = useRef(phase)
   useEffect(() => {
-    if (prev.current === 'countdown' && phase === 'race') sound.play('go')
+    sound.setVolume(0.9)
+  }, [])
+
+  useEffect(() => {
+    sound.music(phase === 'race' ? 'race' : phase === 'idle' ? 'lobby' : null)
+  }, [phase, armed])
+
+  useEffect(() => {
+    if (phase === 'countdown') sound.play(countdown > 0 ? 'beep' : 'go')
+  }, [phase, countdown])
+
+  const previousPhase = useRef(phase)
+
+  useEffect(() => {
+    if (previousPhase.current === 'countdown' && phase === 'race') sound.play('go')
+
     if (phase === 'photo') sound.play('shutter')
-    if (phase === 'result') { sound.play('fanfare'); sound.play('crowd') }
-    prev.current = phase
+
+    if (phase === 'result') {
+      sound.play('fanfare')
+      sound.play('crowd')
+    }
+
+    previousPhase.current = phase
   }, [phase])
-  useEffect(() => { if (tick && tick.b % 2 === 0) sound.play('splash') }, [tick])
+
+  useEffect(() => {
+    if (tick && tick.b % 2 === 0) sound.play('splash')
+  }, [tick])
+
   useEffect(() => {
     if (phase !== 'result') return
-    const t = setTimeout(() => live.reset(), 25_000)
-    return () => clearTimeout(t)
+
+    const resetTimeout = setTimeout(() => live.reset(), 25_000)
+
+    return () => clearTimeout(resetTimeout)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])
-  // The photo-finish ducks slide in: first render off screen, then the transition runs.
+
   useEffect(() => {
     if (phase !== 'photo') return
-    const t = setTimeout(() => setPhotoGo(true), 80)
+
+    const slideTimeout = setTimeout(() => setPhotoGo(true), 80)
+
     return () => {
-      clearTimeout(t)
+      clearTimeout(slideTimeout)
       setPhotoGo(false)
     }
   }, [phase])
+
   const playersRef = useRef(0)
+
   useEffect(() => {
     if (room && room.count > playersRef.current && playersRef.current > 0) sound.play('join')
+
     if (room) playersRef.current = room.count
   }, [room])
 
-  if (!room || !geo) {
+  if (!room || !geometry) {
     return (
       <main style={{ height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1E1446', color: '#fff', fontFamily: DISPLAY, fontSize: 40 }}>
         {live.error ? `${code}: ${live.error}` : 'Loading stage…'}
@@ -230,28 +279,28 @@ export function StagePage({ code }: { code: string }) {
   const trackName = room.track.name.toUpperCase()
   const lapsLabel = `${room.track.laps} ${room.track.laps > 1 ? 'LAPS' : 'LAP'}`
   const trackMeta = `${(room.track.lengthM / 1000).toFixed(1)} km · ${room.track.turns} turns · ${room.track.laps} ${room.track.laps > 1 ? 'laps' : 'lap'}`
-  const ents = grid?.entrants || []
-  const p = tick?.p || ents.map(() => 0)
-  const order = p.map((v, i) => ({ i, v })).sort((a, b) => b.v - a.v)
-  const lead = order[0]?.v ?? 0
-  const lapNow = Math.min(room.track.laps, Math.floor(Math.min(lead / 10000, 1) * room.track.laps) + 1)
-  const big = ents.length > 100 // a full room: smaller ducks on the grid and on the track so all 200 fit
+  const entrants = grid?.entrants || []
+  const positions = tick?.p || entrants.map(() => 0)
+  const standings = positions.map((progress, index) => ({ index, progress })).sort((first, second) => second.progress - first.progress)
+  const leadProgress = standings[0]?.progress ?? 0
+  const currentLap = Math.min(room.track.laps, Math.floor(Math.min(leadProgress / 10000, 1) * room.track.laps) + 1)
+  const isCrowded = entrants.length > 100
   const finish = (() => {
-    const s = pointAt(geo, geo.closed ? 0 : 0.96, 0)
-    return { x: Math.round(s.x - 15), y: Math.round(s.y - 75), a: Math.round(Math.atan2(s.dy, s.dx) * 180 / Math.PI) }
+    const point = pointAtFraction(geometry, geometry.closed ? 0 : 0.96, 0)
+
+    return { x: Math.round(point.x - 15), y: Math.round(point.y - 75), angle: Math.round(Math.atan2(point.dy, point.dx) * 180 / Math.PI) }
   })()
-  const rk = result?.ranking || []
+  const rankingRows = result?.ranking || []
   const minted = !!settled?.ok
 
   return (
     <main onPointerDown={() => { sound.unlock(); setArmed(true) }} style={{ height: '100dvh', overflow: 'hidden', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ position: 'relative', width: W, height: H, transform: `scale(${scale})`, transformOrigin: 'center', flex: 'none', overflow: 'hidden', background: '#1E1446', color: '#fff', fontFamily: 'var(--font-sans)' }}>
+      <div style={{ position: 'relative', width: STAGE_WIDTH, height: STAGE_HEIGHT, transform: `scale(${scale})`, transformOrigin: 'center', flex: 'none', overflow: 'hidden', background: '#1E1446', color: '#fff', fontFamily: 'var(--font-sans)' }}>
         <div style={{ position: 'absolute', right: 24, bottom: 24, zIndex: 5000, display: 'flex', alignItems: 'center', gap: 10 }}>
           {!armed && <span style={{ fontSize: 18, fontWeight: 800, color: '#C9B8FF' }}>click once to enable sound</span>}
           <SoundButton dark />
         </div>
 
-        {/* LOBBY */}
         {phase === 'idle' && (
           <div style={{ position: 'absolute', inset: 0, background: '#1E1446' }}>
             <div aria-hidden style={{ position: 'absolute', right: -260, top: 120, width: 1100, height: 1100, borderRadius: '50%', background: '#836EF9', animation: 'dwPulse 4s ease-in-out infinite' }} />
@@ -264,8 +313,8 @@ export function StagePage({ code }: { code: string }) {
               <div style={{ display: 'flex', gap: 22, alignItems: 'stretch' }}>
                 <div style={{ flex: 1, background: '#2A1D5E', border: '5px solid #000000', borderRadius: 32, boxShadow: '0 10px 0 #000000', padding: '20px 28px', display: 'flex', gap: 22, alignItems: 'center' }}>
                   <svg viewBox="-60 40 1800 960" width="300" height="160" aria-hidden>
-                    <path d={geo.d} fill="none" stroke="#000000" strokeWidth="90" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d={geo.d} fill="none" stroke="#836EF9" strokeWidth="66" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={geometry.d} fill="none" stroke="#000000" strokeWidth="90" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={geometry.d} fill="none" stroke="#836EF9" strokeWidth="66" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                   <div>
                     <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: 3, color: '#C9B8FF' }}>TRACK</div>
@@ -283,17 +332,17 @@ export function StagePage({ code }: { code: string }) {
             <div style={{ position: 'absolute', left: 1260, top: 110, width: 540, display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'dwFloatR 3s ease-in-out infinite' }}>
               <div style={{ background: '#FFC93C', color: '#1E1446', fontFamily: DISPLAY, fontSize: 50, padding: '10px 36px 16px', border: '6px solid #000000', borderBottom: 'none', borderRadius: '28px 28px 0 0' }}>SCAN · HATCH · RACE</div>
               <div style={{ background: '#ffffff', border: '6px solid #000000', borderRadius: 32, boxShadow: '0 16px 0 #000000', padding: 28 }}>
-                {qr ? <img src={qr} width={420} height={420} alt={`QR code to join ${code}`} style={{ display: 'block' }} /> : <div style={{ width: 420, height: 420 }} />}
+                {qrDataUrl ? <img src={qrDataUrl} width={420} height={420} alt={`QR code to join ${code}`} style={{ display: 'block' }} /> : <div style={{ width: 420, height: 420 }} />}
               </div>
               <div style={{ marginTop: 22, fontFamily: MONO, fontSize: 22, fontWeight: 700, color: '#1E1446', whiteSpace: 'nowrap' }}>{joinUrl.replace(/^https?:\/\//, '')}</div>
             </div>
             <div style={{ position: 'absolute', left: 110, bottom: 56, width: 1700, display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: 3, color: '#C9B8FF' }}>DUCKS IN THE ROOM</div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 14, overflow: 'hidden' }}>
-                {room.players.slice(-12).map((pl, i) => (
-                  <div key={pl.address} style={{ flex: 'none', animation: 'dwChip .45s cubic-bezier(.2,1.4,.4,1) both', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: 120 }}>
-                    <div style={{ animation: `dwBob 1.3s ease-in-out ${((i * 0.13) % 1).toFixed(2)}s infinite` }}><DuckSvg {...pl} width={96} /></div>
-                    <div style={{ ...pill(pl.host ? '#FFC93C' : '#2A1D5E', pl.host ? '#1E1446' : '#ffffff'), maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl.name}</div>
+                {room.players.slice(-12).map((player, index) => (
+                  <div key={player.address} style={{ flex: 'none', animation: 'dwChip .45s cubic-bezier(.2,1.4,.4,1) both', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: 120 }}>
+                    <div style={{ animation: `dwBob 1.3s ease-in-out ${((index * 0.13) % 1).toFixed(2)}s infinite` }}><DuckSvg {...player} width={96} /></div>
+                    <div style={{ ...pill(player.host ? '#FFC93C' : '#2A1D5E', player.host ? '#1E1446' : '#ffffff'), maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.name}</div>
                   </div>
                 ))}
               </div>
@@ -301,18 +350,17 @@ export function StagePage({ code }: { code: string }) {
           </div>
         )}
 
-        {/* STARTING GRID (MotoGP style; order = join order e.i) */}
         {phase === 'countdown' && grid && (
           <div style={{ position: 'absolute', inset: 0 }}>
             <div style={{ position: 'absolute', left: 110, top: 44 }}>
-              <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: 4, color: '#C9B8FF' }}>{code} · {trackName} · {lapsLabel} · {ents.length} DUCKS</div>
+              <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: 4, color: '#C9B8FF' }}>{code} · {trackName} · {lapsLabel} · {entrants.length} DUCKS</div>
               <div style={{ fontFamily: DISPLAY, fontSize: 96, lineHeight: 1, color: '#FFC93C', textShadow: '0 8px 0 #836EF9' }}>STARTING GRID</div>
             </div>
             <div style={{ position: 'absolute', right: 110, top: 34, width: 160, height: 160, borderRadius: '50%', background: '#FFC93C', color: '#1E1446', border: '6px solid #000000', boxShadow: '0 10px 0 #000000', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', animation: 'dwPulse 1s ease-in-out infinite' }}>
               <div style={{ fontSize: 18, fontWeight: 900 }}>GO IN</div>
               <div style={{ fontFamily: DISPLAY, fontSize: 96, lineHeight: 0.9 }}>{countdown}</div>
             </div>
-            {hasFlyover(ents.length) && (
+            {needsGridFlyover(entrants.length) && (
               <div style={{ position: 'absolute', right: 300, top: 92, padding: '10px 22px', background: '#ffffff', color: '#1E1446', border: '5px solid #000000', borderRadius: 999, boxShadow: '0 6px 0 #000000', fontSize: 26, fontWeight: 900 }}>CAMERA · ROWS 1–8 → BACK OF THE GRID</div>
             )}
             <div style={{ position: 'absolute', left: 60, top: 230, width: 1800, height: 660, background: '#2A1D5E', border: '6px solid #000000', borderRadius: 40, boxShadow: '0 14px 0 #000000', overflow: 'hidden' }}>
@@ -320,65 +368,66 @@ export function StagePage({ code }: { code: string }) {
               <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 26, background: 'repeating-linear-gradient(90deg, #ffffff 0 60px, #F25F5C 60px 120px)', borderTop: '5px solid #000000' }} />
               <div aria-hidden style={{ position: 'absolute', left: 1630, top: 26, bottom: 26, width: 48, background: `${CHECKER} 0 0 / 24px 24px`, borderLeft: '5px solid #000000', borderRight: '5px solid #000000' }} />
               <div aria-hidden style={{ position: 'absolute', left: 1700, top: 300, transform: 'rotate(90deg)', transformOrigin: 'left top', fontFamily: DISPLAY, fontSize: 34, color: '#FFC93C', whiteSpace: 'nowrap' }}>START</div>
-              <MotoGrid entrants={ents} countdown={countdown} total={grid.countdown} camRef={camRef} />
+              <MotoGrid entrants={entrants} countdown={countdown} total={grid.countdown} cameraRef={cameraRef} />
             </div>
-            {hasFlyover(ents.length) && (
+            {needsGridFlyover(entrants.length) && (
               <div style={{ position: 'absolute', left: 110, right: 110, top: 926 }}>
-                <GridMinimap entrants={ents} camRef={camRef} />
+                <GridMinimap entrants={entrants} cameraRef={cameraRef} />
               </div>
             )}
           </div>
         )}
 
-        {/* RACE */}
         {phase === 'race' && grid && (
           <div style={{ animation: 'dwShake .55s ease-out .05s both', position: 'absolute', inset: 0, background: '#241858' }}>
-            <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} style={{ position: 'absolute', left: 0, top: 0 }} aria-hidden>
-              <path d={geo.d} fill="none" stroke="#000000" strokeWidth="150" strokeLinecap="round" strokeLinejoin="round" />
-              <path d={geo.d} fill="none" stroke="#836EF9" strokeWidth="134" strokeLinecap="round" strokeLinejoin="round" />
-              <path d={geo.d} fill="none" stroke="#9D8CFB" strokeWidth="80" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
-              <path d={geo.d} fill="none" stroke="#ffffff" strokeWidth="4" strokeDasharray="26 44" opacity="0.5" style={{ animation: 'dwFlow 1s linear infinite' }} />
+            <svg viewBox={`0 0 ${STAGE_WIDTH} ${STAGE_HEIGHT}`} width={STAGE_WIDTH} height={STAGE_HEIGHT} style={{ position: 'absolute', left: 0, top: 0 }} aria-hidden>
+              <path d={geometry.d} fill="none" stroke="#000000" strokeWidth="150" strokeLinecap="round" strokeLinejoin="round" />
+              <path d={geometry.d} fill="none" stroke="#836EF9" strokeWidth="134" strokeLinecap="round" strokeLinejoin="round" />
+              <path d={geometry.d} fill="none" stroke="#9D8CFB" strokeWidth="80" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
+              <path d={geometry.d} fill="none" stroke="#ffffff" strokeWidth="4" strokeDasharray="26 44" opacity="0.5" style={{ animation: 'dwFlow 1s linear infinite' }} />
             </svg>
-            <div aria-hidden style={{ position: 'absolute', left: finish.x, top: finish.y, width: 30, height: 150, transform: `rotate(${finish.a}deg)`, background: `${CHECKER} 0 0 / 30px 30px`, border: '4px solid #000000' }} />
-            {geo.turns.map((t) => (
-              <div key={t.n} aria-hidden style={{ position: 'absolute', left: Math.round(t.x + 48), top: Math.round(t.y - 72), width: 44, height: 44, borderRadius: '50%', background: '#1E1446', border: '3px solid #ffffff', color: '#ffffff', fontSize: 18, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{t.n}</div>
+            <div aria-hidden style={{ position: 'absolute', left: finish.x, top: finish.y, width: 30, height: 150, transform: `rotate(${finish.angle}deg)`, background: `${CHECKER} 0 0 / 30px 30px`, border: '4px solid #000000' }} />
+            {geometry.turns.map((turn) => (
+              <div key={turn.n} aria-hidden style={{ position: 'absolute', left: Math.round(turn.x + 48), top: Math.round(turn.y - 72), width: 44, height: 44, borderRadius: '50%', background: '#1E1446', border: '3px solid #ffffff', color: '#ffffff', fontSize: 18, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{turn.n}</div>
             ))}
-            <RaceLayer geo={geo} ents={ents} p={p} n={tick?.n ?? tick?.t ?? 0} en={tick?.en ?? []} big={big} top3={order.slice(0, 3).map((o, ti) => ({ i: o.i, label: `${ti + 1} ${ents[o.i]?.name ?? ''}` }))} />
+            <RaceLayer geometry={geometry} entrants={entrants} positions={positions} step={tick?.n ?? tick?.t ?? 0} energies={tick?.en ?? []} isCrowded={isCrowded} topThree={standings.slice(0, 3).map((standing, placeIndex) => ({ index: standing.index, label: `${placeIndex + 1} ${entrants[standing.index]?.name ?? ''}` }))} />
             <div style={{ position: 'absolute', left: 40, top: 30, zIndex: 3000, background: '#1E1446', border: '5px solid #000000', borderRadius: 28, boxShadow: '0 8px 0 #000000', padding: '16px 26px', display: 'flex', flexDirection: 'column', gap: 4 }}>
               <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3, color: '#C9B8FF' }}>{code} · {trackName}</div>
-              <div style={{ fontFamily: DISPLAY, fontSize: 44, color: '#FFC93C' }}>LAP {lapNow} / {room.track.laps}</div>
+              <div style={{ fontFamily: DISPLAY, fontSize: 44, color: '#FFC93C' }}>LAP {currentLap} / {room.track.laps}</div>
               <div style={{ fontFamily: MONO, fontSize: 22, fontWeight: 700 }}>BLOCK #{tick?.b?.toLocaleString('en-US') ?? '—'}</div>
             </div>
             <div style={{ position: 'absolute', right: 40, top: 30, zIndex: 3000, width: 400, background: '#ffffff', color: '#1E1446', border: '5px solid #000000', borderRadius: 28, boxShadow: '0 8px 0 #000000', overflow: 'hidden' }}>
               <div style={{ background: '#FFC93C', borderBottom: '5px solid #000000', padding: '10px 22px', fontFamily: DISPLAY, fontSize: 34 }}>TOP 3</div>
-              {order.slice(0, 3).map((o, i) => (
-                <div key={o.i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 22px', borderBottom: '3px solid #E6E0FF' }}>
-                  <div style={{ fontFamily: DISPLAY, fontSize: 36, width: 28 }}>{i + 1}</div>
-                  <span style={{ width: 26, height: 26, borderRadius: '50%', border: '4px solid #000000', background: ents[o.i]?.color }} />
-                  <div style={{ flex: 1, fontSize: 24, fontWeight: 900, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ents[o.i]?.name}</div>
-                  <div style={{ fontFamily: MONO, fontSize: 18 }}>{i === 0 ? 'LEAD' : '+' + ((lead - o.v) / 100).toFixed(1)}</div>
+              {standings.slice(0, 3).map((standing, placeIndex) => (
+                <div key={standing.index} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 22px', borderBottom: '3px solid #E6E0FF' }}>
+                  <div style={{ fontFamily: DISPLAY, fontSize: 36, width: 28 }}>{placeIndex + 1}</div>
+                  <span style={{ width: 26, height: 26, borderRadius: '50%', border: '4px solid #000000', background: entrants[standing.index]?.color }} />
+                  <div style={{ flex: 1, fontSize: 24, fontWeight: 900, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{entrants[standing.index]?.name}</div>
+                  <div style={{ fontFamily: MONO, fontSize: 18 }}>{placeIndex === 0 ? 'LEAD' : '+' + ((leadProgress - standing.progress) / 100).toFixed(1)}</div>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* PHOTO FINISH */}
         {phase === 'photo' && result && (
           <div style={{ position: 'absolute', inset: 0, background: '#1E1446' }}>
             <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 50, background: '#ffffff', pointerEvents: 'none', animation: 'dwFlash .7s ease-out forwards' }} />
             <div style={{ position: 'absolute', left: 96, top: 40, fontFamily: DISPLAY, fontSize: 96, color: '#FFC93C', textShadow: '0 8px 0 #836EF9' }}>PHOTO FINISH</div>
             <div style={{ position: 'absolute', left: 96, top: 170, width: 1728, height: 780, background: '#836EF9', border: '8px solid #000000', borderRadius: 40, boxShadow: '0 16px 0 #000000', overflow: 'hidden' }}>
               <div aria-hidden style={{ position: 'absolute', left: 1060, top: 0, width: 56, height: 780, background: `${CHECKER} 0 0 / 56px 56px`, borderLeft: '6px solid #000000', borderRight: '6px solid #000000' }} />
-              {[2, 1, 0].map((k) => {
-                const r = rk[k]
-                if (!r) return null
-                const sp = PHOTO_SPECS[k]
-                const left = sp.beak - sp.w * 0.99
+              {[2, 1, 0].map((slotIndex) => {
+                const row = rankingRows[slotIndex]
+
+                if (!row) return null
+
+                const spec = PHOTO_SPECS[slotIndex]
+                const left = spec.beak - spec.width * 0.99
+
                 return (
-                  <div key={r.rank} style={{ position: 'absolute', left: Math.round(photoGo ? left : left - 900), top: sp.t, width: sp.w, transition: 'left 1.6s cubic-bezier(.2,.7,.3,1)' }}>
-                    <MiniDuck color={r.color} width="100%" stroke={4} eye={3.5} style={{ animation: 'dwBob 1.8s ease-in-out infinite' }} />
-                    <div style={{ position: 'absolute', right: '100%', top: '48%', marginRight: 12, padding: '6px 16px', color: '#1E1446', border: '4px solid #000000', borderRadius: 999, fontSize: 26, fontWeight: 900, whiteSpace: 'nowrap', background: k === 0 ? '#FFC93C' : '#ffffff' }}>{k + 1} · {r.name}</div>
+                  <div key={row.rank} style={{ position: 'absolute', left: Math.round(photoGo ? left : left - 900), top: spec.top, width: spec.width, transition: 'left 1.6s cubic-bezier(.2,.7,.3,1)' }}>
+                    <MiniDuck color={row.color} width="100%" stroke={4} eye={3.5} style={{ animation: 'dwBob 1.8s ease-in-out infinite' }} />
+                    <div style={{ position: 'absolute', right: '100%', top: '48%', marginRight: 12, padding: '6px 16px', color: '#1E1446', border: '4px solid #000000', borderRadius: 999, fontSize: 26, fontWeight: 900, whiteSpace: 'nowrap', background: slotIndex === 0 ? '#FFC93C' : '#ffffff' }}>{slotIndex + 1} · {row.name}</div>
                   </div>
                 )
               })}
@@ -386,36 +435,37 @@ export function StagePage({ code }: { code: string }) {
           </div>
         )}
 
-        {/* WINNER */}
         {phase === 'result' && result && (
           <div style={{ animation: 'dwShake .6s ease-out 1.25s both', position: 'absolute', inset: 0, background: '#836EF9', color: '#1E1446' }}>
-            <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} style={{ position: 'absolute', left: 0, top: 0, transformOrigin: '960px 420px', animation: 'dwSpin 24s linear infinite' }} aria-hidden>
+            <svg viewBox={`0 0 ${STAGE_WIDTH} ${STAGE_HEIGHT}`} width={STAGE_WIDTH} height={STAGE_HEIGHT} style={{ position: 'absolute', left: 0, top: 0, transformOrigin: '960px 420px', animation: 'dwSpin 24s linear infinite' }} aria-hidden>
               <path d={RAYS} fill="#9682FA" />
             </svg>
             <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 50, background: '#ffffff', pointerEvents: 'none', animation: 'dwFlash .6s ease-out forwards' }} />
-            {CONFETTI.map((c, j) => (
-              <div key={j} aria-hidden style={{ position: 'absolute', left: c.x, top: 0, zIndex: 10, width: c.w, height: 16, background: c.c, border: '3px solid #000000', animation: `dwFall ${c.d}s linear ${c.dl}s infinite both` }} />
+            {CONFETTI.map((piece, index) => (
+              <div key={index} aria-hidden style={{ position: 'absolute', left: piece.left, top: 0, zIndex: 10, width: piece.width, height: 16, background: piece.color, border: '3px solid #000000', animation: `dwFall ${piece.duration}s linear ${piece.delay}s infinite both` }} />
             ))}
             <div style={{ position: 'absolute', left: 0, top: 52, width: 1920, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, zIndex: 20 }}>
-              <div style={{ padding: '10px 28px', background: '#1E1446', color: '#ffffff', borderRadius: 999, fontSize: 28, fontWeight: 900, letterSpacing: 4 }}>{code} · {trackName} · {(rk[0]?.name || '').toUpperCase()}</div>
+              <div style={{ padding: '10px 28px', background: '#1E1446', color: '#ffffff', borderRadius: 999, fontSize: 28, fontWeight: 900, letterSpacing: 4 }}>{code} · {trackName} · {(rankingRows[0]?.name || '').toUpperCase()}</div>
               <div role="heading" aria-level={1} aria-label="Absolute Marvelous" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', transform: 'rotate(-2deg)' }}>
                 <div style={{ display: 'flex' }}>
-                  {LETTERS_A.map((l, i) => <span key={i} aria-hidden style={{ display: 'inline-block', animation: `dwPop .55s cubic-bezier(.2,1.5,.4,1) ${l.d}s both` }}><span style={{ ...letter('#FFC93C', 14), animation: `dwWave 1.4s ease-in-out ${l.w}s infinite` }}>{l.c}</span></span>)}
+                  {LETTERS_FIRST_LINE.map((letter, index) => <span key={index} aria-hidden style={{ display: 'inline-block', animation: `dwPop .55s cubic-bezier(.2,1.5,.4,1) ${letter.popDelay}s both` }}><span style={{ ...letterStyle('#FFC93C', 14), animation: `dwWave 1.4s ease-in-out ${letter.waveDelay}s infinite` }}>{letter.character}</span></span>)}
                 </div>
                 <div style={{ display: 'flex' }}>
-                  {LETTERS_B.map((l, i) => <span key={i} aria-hidden style={{ display: 'inline-block', animation: `dwPop .55s cubic-bezier(.2,1.5,.4,1) ${l.d}s both` }}><span style={{ ...letter('#ffffff', 14), animation: `dwWave 1.4s ease-in-out ${l.w}s infinite` }}>{l.c}</span></span>)}
+                  {LETTERS_SECOND_LINE.map((letter, index) => <span key={index} aria-hidden style={{ display: 'inline-block', animation: `dwPop .55s cubic-bezier(.2,1.5,.4,1) ${letter.popDelay}s both` }}><span style={{ ...letterStyle('#ffffff', 14), animation: `dwWave 1.4s ease-in-out ${letter.waveDelay}s infinite` }}>{letter.character}</span></span>)}
                 </div>
               </div>
             </div>
             <div style={{ position: 'absolute', left: 560, bottom: 0, width: 800, height: 560, display: 'flex', alignItems: 'flex-end' }}>
-              {[1, 0, 2].map((k) => {
-                const r = rk[k]
-                if (!r) return <div key={k} style={{ flex: 1 }} />
+              {[1, 0, 2].map((slotIndex) => {
+                const row = rankingRows[slotIndex]
+
+                if (!row) return <div key={slotIndex} style={{ flex: 1 }} />
+
                 return (
-                  <div key={k} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', animation: `dwRise .7s cubic-bezier(.2,.9,.3,1.1) ${PODIUM.dl[k]}s both` }}>
-                    <div style={{ width: PODIUM.dw[k], animation: `dwWave ${PODIUM.bob[k]}s ease-in-out infinite` }}><MiniDuck color={r.color} width="100%" stroke={5} eye={4} /></div>
-                    <div style={{ margin: '4px 0 10px', padding: '6px 18px', background: '#ffffff', border: '4px solid #000000', borderRadius: 999, fontSize: 24, fontWeight: 900, whiteSpace: 'nowrap' }}>{r.name}</div>
-                    <div style={{ width: '100%', height: PODIUM.h[k], background: k === 0 ? '#FFC93C' : '#ffffff', border: '6px solid #000000', borderBottom: 'none', borderRadius: '20px 20px 0 0', display: 'flex', justifyContent: 'center', paddingTop: 12, boxSizing: 'border-box', fontFamily: DISPLAY, fontSize: 96, lineHeight: 1 }}>{k + 1}</div>
+                  <div key={slotIndex} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', animation: `dwRise .7s cubic-bezier(.2,.9,.3,1.1) ${PODIUM.delay[slotIndex]}s both` }}>
+                    <div style={{ width: PODIUM.duckWidth[slotIndex], animation: `dwWave ${PODIUM.bob[slotIndex]}s ease-in-out infinite` }}><MiniDuck color={row.color} width="100%" stroke={5} eye={4} /></div>
+                    <div style={{ margin: '4px 0 10px', padding: '6px 18px', background: '#ffffff', border: '4px solid #000000', borderRadius: 999, fontSize: 24, fontWeight: 900, whiteSpace: 'nowrap' }}>{row.name}</div>
+                    <div style={{ width: '100%', height: PODIUM.height[slotIndex], background: slotIndex === 0 ? '#FFC93C' : '#ffffff', border: '6px solid #000000', borderBottom: 'none', borderRadius: '20px 20px 0 0', display: 'flex', justifyContent: 'center', paddingTop: 12, boxSizing: 'border-box', fontFamily: DISPLAY, fontSize: 96, lineHeight: 1 }}>{slotIndex + 1}</div>
                   </div>
                 )
               })}

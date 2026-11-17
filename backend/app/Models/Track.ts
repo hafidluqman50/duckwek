@@ -3,10 +3,10 @@ import { sequelize } from '@config/database'
 
 export type TrackStatus = 'active' | 'coming_soon'
 export interface TrackProfile {
-  speed: number // multiplier on speed stat (long straights > 1)
-  weight: number // multiplier on weight drag (twisty tracks < 1: weight = grip)
+  speed: number
+  weight: number
   boost: number
-  lapTicks: number // blocks per lap
+  lapTicks: number
 }
 
 class Track extends Model<InferAttributes<Track>, InferCreationAttributes<Track>> {
@@ -17,7 +17,7 @@ class Track extends Model<InferAttributes<Track>, InferCreationAttributes<Track>
   declare description: string
   declare creator: string
   declare platform: boolean
-  declare rent_price: string // USDC base units (6 decimals) as string
+  declare rent_price: string
   declare laps: number
   declare turns: number
   declare length_m: number
@@ -25,10 +25,10 @@ class Track extends Model<InferAttributes<Track>, InferCreationAttributes<Track>
   declare path: number[][]
   declare sectors: number[]
   declare profile: TrackProfile
-  declare segments: string // hex of the on-chain layout (plan 0013 G4)
+  declare segments: string
   declare layout_version: number
   declare layout_hash: string | null
-  declare holder: string | null // ownerOf(trackId): the one the rent and tickets are credited to
+  declare holder: string | null
   declare status: TrackStatus
   declare created_at: CreationOptional<Date>
   declare updated_at: CreationOptional<Date>

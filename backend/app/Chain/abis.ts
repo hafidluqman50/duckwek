@@ -1,8 +1,5 @@
 import { parseAbi } from 'viem'
 
-// The exact function and event signatures the backend uses. The source of truth is smart-contract/src (plan §5.1);
-// test/e2e/abi.check.ts compares these with the exported ABI after every contract change.
-
 const STRUCTS = [
   'struct Loadout { uint8 template; uint16[3] partBySlot; }',
   'struct Order { address payer; uint8 kind; uint256 ref; bytes32 roomKey; Loadout loadout; uint256 amount; uint256 salt; }',
@@ -71,7 +68,6 @@ export const usdcAbi = parseAbi([
 
 export const badgeAbi = parseAbi(['function ownerOf(uint256) view returns (address)'])
 
-// Catalog reads (plan 0013 DoD 6): part types, stats and circuit layouts come from the chain, never from hardcoded seeds.
 export const partNftAbi = parseAbi([
   'struct PartType { string name; address creator; uint96 price; uint8 slot; uint24 color; bool platform; bool active; }',
   'function typeCount() view returns (uint256)',

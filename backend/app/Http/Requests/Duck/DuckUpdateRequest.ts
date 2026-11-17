@@ -21,13 +21,15 @@ export class DuckUpdateRequest {
       equippedPartTypeId: Joi.number().integer().min(0).allow(null),
     })
     const { error } = validationScheme.validate(this.request, { abortEarly: false })
+
     if (error) {
-      throw new BadRequestException('Error Validation', { validations: error.details.map((x) => x.message) })
+      throw new BadRequestException('Error Validation', { validations: error.details.map((detail) => detail.message) })
     }
   }
 
   public toDTO(): DuckUpdateDTO {
     this.validator()
+
     return new DuckUpdateDTO(this.request as any)
   }
 }

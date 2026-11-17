@@ -9,21 +9,23 @@ export class AuthController extends BaseController {
     super()
   }
 
-  public async nonce(req: Request, res: Response): Promise<void> {
+  public async nonce(request: Request, response: Response): Promise<void> {
     try {
-      const dto = new AuthNonceRequest({ address: String(req.body.address || '') }).toDTO()
-      this.ok(res, 'Sign this message to sign in', await this.authService.nonce(dto))
-    } catch (e) {
-      this.fail(res, e)
+      const nonceInput = new AuthNonceRequest({ address: String(request.body.address || '') }).toDTO()
+
+      this.ok(response, 'Sign this message to sign in', await this.authService.nonce(nonceInput))
+    } catch (error) {
+      this.fail(response, error)
     }
   }
 
-  public async verify(req: Request, res: Response): Promise<void> {
+  public async verify(request: Request, response: Response): Promise<void> {
     try {
-      const dto = new AuthVerifyRequest({ address: String(req.body.address || ''), signature: String(req.body.signature || '') }).toDTO()
-      this.ok(res, 'Signed in', await this.authService.verify(dto))
-    } catch (e) {
-      this.fail(res, e)
+      const verifyInput = new AuthVerifyRequest({ address: String(request.body.address || ''), signature: String(request.body.signature || '') }).toDTO()
+
+      this.ok(response, 'Signed in', await this.authService.verify(verifyInput))
+    } catch (error) {
+      this.fail(response, error)
     }
   }
 }

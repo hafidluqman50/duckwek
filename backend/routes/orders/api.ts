@@ -5,6 +5,6 @@ import { IAuthRequest } from '@Interfaces/IAuthRequest'
 
 const ordersRoute: Express = express()
 
-ordersRoute.post('/', [authCheck.handle], (req: IAuthRequest, res: Response): Promise<void> => orderController.create(req, res))
+ordersRoute.post('/', [authCheck.handle], (request: IAuthRequest, response: Response): Promise<void> => orderController.create(request, response))
 
 export default ordersRoute

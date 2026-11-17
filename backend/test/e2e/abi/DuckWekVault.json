@@ -329,7 +329,7 @@
     "name": "loadoutHash",
     "inputs": [
       {
-        "name": "l",
+        "name": "loadout",
         "type": "tuple",
         "internalType": "struct DuckWekVault.Loadout",
         "components": [
@@ -360,7 +360,7 @@
     "name": "orderHash",
     "inputs": [
       {
-        "name": "o",
+        "name": "order",
         "type": "tuple",
         "internalType": "struct DuckWekVault.Order",
         "components": [
@@ -487,7 +487,7 @@
     "name": "permitAndSpend",
     "inputs": [
       {
-        "name": "o",
+        "name": "order",
         "type": "tuple",
         "internalType": "struct DuckWekVault.Order",
         "components": [
@@ -541,7 +541,7 @@
         ]
       },
       {
-        "name": "p",
+        "name": "permit",
         "type": "tuple",
         "internalType": "struct DuckWekVault.Permit",
         "components": [
@@ -592,7 +592,7 @@
         "internalType": "uint8"
       },
       {
-        "name": "ref",
+        "name": "referenceId",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -771,7 +771,7 @@
     "name": "spend",
     "inputs": [
       {
-        "name": "o",
+        "name": "order",
         "type": "tuple",
         "internalType": "struct DuckWekVault.Order",
         "components": [
@@ -967,7 +967,7 @@
     "name": "withdrawWithSig",
     "inputs": [
       {
-        "name": "w",
+        "name": "withdrawal",
         "type": "tuple",
         "internalType": "struct DuckWekVault.Withdrawal",
         "components": [
@@ -999,7 +999,7 @@
         ]
       },
       {
-        "name": "sig",
+        "name": "signature",
         "type": "bytes",
         "internalType": "bytes"
       }

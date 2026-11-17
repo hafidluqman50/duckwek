@@ -5,8 +5,8 @@ import { IAuthRequest } from '@Interfaces/IAuthRequest'
 
 const roomsRoute: Express = express()
 
-roomsRoute.get('/:code', (req: Request, res: Response): Promise<void> => roomController.show(req, res))
-roomsRoute.put('/:code/loadout', [authCheck.handle], (req: IAuthRequest, res: Response): Promise<void> => roomController.loadout(req, res))
-roomsRoute.post('/:code/start', [authCheck.handle], (req: IAuthRequest, res: Response): Promise<void> => roomController.start(req, res))
+roomsRoute.get('/:code', (request: Request, response: Response): Promise<void> => roomController.show(request, response))
+roomsRoute.put('/:code/loadout', [authCheck.handle], (request: IAuthRequest, response: Response): Promise<void> => roomController.loadout(request, response))
+roomsRoute.post('/:code/start', [authCheck.handle], (request: IAuthRequest, response: Response): Promise<void> => roomController.start(request, response))
 
 export default roomsRoute

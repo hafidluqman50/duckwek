@@ -24,17 +24,17 @@ export interface PublicDuck {
   status: Duck['status']
 }
 
-export const toPublicDuck = (d: Duck): PublicDuck => ({
-  name: d.name,
-  template: d.template,
-  bodyColor: d.body_color,
-  billColor: d.bill_color,
-  cosmetics: d.cosmetics,
-  equippedPartTypeId: d.equipped_part_type_id,
-  races: d.races,
-  titles: d.titles,
-  bestRank: d.best_rank,
-  status: d.status,
+export const toPublicDuck = (duck: Duck): PublicDuck => ({
+  name: duck.name,
+  template: duck.template,
+  bodyColor: duck.body_color,
+  billColor: duck.bill_color,
+  cosmetics: duck.cosmetics,
+  equippedPartTypeId: duck.equipped_part_type_id,
+  races: duck.races,
+  titles: duck.titles,
+  bestRank: duck.best_rank,
+  status: duck.status,
 })
 
 export class ProfileService {
@@ -45,7 +45,6 @@ export class ProfileService {
     public playerRepository: PlayerRepository,
   ) {}
 
-  /** USDC in the wallet, plus the welcome USDC that the first paid order mints when the Vault has it enabled, and what the Vault owes this address. */
   private async balances(address: string): Promise<{ usdc: bigint; earnings: bigint }> {
     const [balance, earnings, player, welcomeEnabled] = await Promise.all([
       publicClient.readContract({ address: addresses.usdc, abi: usdcAbi, functionName: 'balanceOf', args: [address as Address] }) as Promise<bigint>,
@@ -54,6 +53,7 @@ export class ProfileService {
       publicClient.readContract({ address: addresses.vault, abi: vaultAbi, functionName: 'welcomeEnabled' }) as Promise<boolean>,
     ])
     const welcome = player && !player.first_spend_at && welcomeEnabled ? env.welcomeUsdc : 0n
+
     return { usdc: balance + welcome, earnings }
   }
 
@@ -65,33 +65,36 @@ export class ProfileService {
       this.paymentRepository.activity(address),
       this.balances(address),
     ])
+
     return {
       address,
       duck: duck ? toPublicDuck(duck) : null,
       usdc: money.usdc.toString(),
       earnings: money.earnings.toString(),
-      parts: [...new Set(licenses.map((l) => l.type_id))],
-      licenses: licenses.map((l) => ({ typeId: l.type_id, tokenId: l.token_id, tx: l.tx_hash })),
-      titles: titles.map((t) => ({ title: t.title, rank: t.rank, room: t.room_code, raceId: t.race_id, tx: t.tx_hash })),
+      parts: [...new Set(licenses.map((license) => license.type_id))],
+      licenses: licenses.map((license) => ({ typeId: license.type_id, tokenId: license.token_id, tx: license.tx_hash })),
+      titles: titles.map((title) => ({ title: title.title, rank: title.rank, room: title.room_code, raceId: title.race_id, tx: title.tx_hash })),
       activity: activity
-        .filter((p) => p.status === 'confirmed' || p.status === 'failed')
-        .map((p) => ({ kind: p.kind, amount: String(p.amount), status: p.status, tx: p.tx_hash, room: p.room_code, at: p.updated_at, label: (p.meta as any)?.label || p.kind })),
+        .filter((payment) => payment.status === 'confirmed' || payment.status === 'failed')
+        .map((payment) => ({ kind: payment.kind, amount: String(payment.amount), status: payment.status, tx: payment.tx_hash, room: payment.room_code, at: payment.updated_at, label: (payment.meta as any)?.label || payment.kind })),
     }
   }
 
-  public async updateDuck(dto: DuckUpdateDTO): Promise<PublicDuck> {
-    if (dto.equippedPartTypeId !== null && !(await this.duckRepository.ownsPart(dto.address, dto.equippedPartTypeId))) {
+  public async updateDuck(duckUpdateInput: DuckUpdateDTO): Promise<PublicDuck> {
+    if (duckUpdateInput.equippedPartTypeId !== null && !(await this.duckRepository.ownsPart(duckUpdateInput.address, duckUpdateInput.equippedPartTypeId))) {
       throw new ForbiddenException('You do not own that part yet')
     }
-    const duck = await this.duckRepository.upsert(dto.address, {
-      name: dto.name,
-      template: dto.template,
-      body_color: dto.bodyColor,
-      bill_color: dto.billColor,
-      cosmetics: dto.cosmetics,
-      equipped_part_type_id: dto.equippedPartTypeId,
+
+    const duck = await this.duckRepository.upsert(duckUpdateInput.address, {
+      name: duckUpdateInput.name,
+      template: duckUpdateInput.template,
+      body_color: duckUpdateInput.bodyColor,
+      bill_color: duckUpdateInput.billColor,
+      cosmetics: duckUpdateInput.cosmetics,
+      equipped_part_type_id: duckUpdateInput.equippedPartTypeId,
     })
-    roomEvents.emit('duck:updated', dto.address)
+    roomEvents.emit('duck:updated', duckUpdateInput.address)
+
     return toPublicDuck(duck)
   }
 }

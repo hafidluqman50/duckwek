@@ -20,5 +20,4 @@ Race.belongsTo(Room, { foreignKey: 'room_id', as: 'room' })
 Room.hasMany(RaceTick, { foreignKey: 'room_id', as: 'ticks' })
 RaceTick.belongsTo(Room, { foreignKey: 'room_id', as: 'room' })
 
-
 export { Player, AuthNonce, Track, PartType, Room, RoomPlayer, PartLicense, Payment, Race, Duck, Title, RaceTick }

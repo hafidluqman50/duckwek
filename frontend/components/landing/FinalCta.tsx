@@ -2,9 +2,9 @@ import Link from 'next/link'
 import { MiniDuck } from '@/components/duck/DuckSvg'
 
 const PODIUM = [
-  { color: '#4ED1C5', w: 110, bob: '1.2s' },
-  { color: '#FFC93C', w: 150, bob: '0.9s' },
-  { color: '#FF7AB6', w: 100, bob: '1.1s' },
+  { color: '#4ED1C5', width: 110, bob: '1.2s' },
+  { color: '#FFC93C', width: 150, bob: '0.9s' },
+  { color: '#FF7AB6', width: 100, bob: '1.1s' },
 ]
 
 export function FinalCta() {
@@ -15,9 +15,9 @@ export function FinalCta() {
         <div className="text-lg font-black tracking-[6px]">PHOTO FINISH</div>
         <h2 className="m-0 font-display text-[56px] font-normal leading-[0.95] text-white [-webkit-text-stroke:8px_#000] [paint-order:stroke_fill] md:text-[clamp(56px,8vw,120px)] md:[-webkit-text-stroke:10px_#000]">Your duck is waiting.</h2>
         <div className="flex items-end gap-1.5">
-          {PODIUM.map((d) => (
-            <div key={d.color} data-final-duck style={{ animation: `dwBob ${d.bob} ease-in-out infinite` }}>
-              <MiniDuck color={d.color} width={d.w} />
+          {PODIUM.map((duck) => (
+            <div key={duck.color} data-final-duck style={{ animation: `dwBob ${duck.bob} ease-in-out infinite` }}>
+              <MiniDuck color={duck.color} width={duck.width} />
             </div>
           ))}
         </div>

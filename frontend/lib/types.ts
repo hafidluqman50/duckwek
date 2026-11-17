@@ -7,7 +7,6 @@ export interface DuckLook {
   billColor: string
   cosmetics: Cosmetics
   partTypeId: number | null
-  /** The part as drawn: its slot and its own colour, sent with the grid so the stage needs no catalog. */
   partSlot?: 'wings' | 'tail' | 'bill' | null
   partColor?: string | null
 }
@@ -58,7 +57,7 @@ export interface Part {
   speed: number
   weight: number
   boost: number
-  color: string // the part's own fill colour, #RRGGBB (an on-chain trait)
+  color: string
   stats: Record<string, number>
   creator: string
   price: string
@@ -108,10 +107,10 @@ export const TEMPLATES: Record<Template, { name: string; tag: string; st: [numbe
 }
 export const BODY_COLORS: [string, string][] = [['#FFC93C', 'Duck yellow'], ['#FFFFFF', 'White'], ['#FF7AB6', 'Pink'], ['#4ED1C5', 'Teal'], ['#7CC6FE', 'Sky'], ['#B8F35A', 'Lime'], ['#FF9F1C', 'Orange'], ['#C9B8FF', 'Lilac'], ['#F25F5C', 'Red'], ['#836EF9', 'Monad purple'], ['#2B2B2B', 'Black'], ['#9BE7FF', 'Ice']]
 export const BILL_COLORS: [string, string][] = [['#FF9F1C', 'Orange'], ['#FFC93C', 'Yellow'], ['#FF7AB6', 'Pink'], ['#1E1446', 'Ink']]
-const PRE = ['Quack', 'Kite', 'Wek', 'Paddle', 'Monad', 'Bebek', 'Mallard', 'Splash', 'Feather', 'Bill', 'Tiki', 'Jogja', 'Gudeg', 'Merapi']
-const SUF = ['Jr', 'King', 'Queen', 'Bro', 'Max', 'X', '77', 'Boy', 'Gang', 'Pro', 'Zz', 'One']
-const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)]
-export const randomName = () => pick(PRE) + pick(SUF)
+const NAME_PREFIXES = ['Quack', 'Kite', 'Wek', 'Paddle', 'Monad', 'Bebek', 'Mallard', 'Splash', 'Feather', 'Bill', 'Tiki', 'Jogja', 'Gudeg', 'Merapi']
+const NAME_SUFFIXES = ['Jr', 'King', 'Queen', 'Bro', 'Max', 'X', '77', 'Boy', 'Gang', 'Pro', 'Zz', 'One']
+const pick = <T,>(options: T[]) => options[Math.floor(Math.random() * options.length)]
+export const randomName = () => pick(NAME_PREFIXES) + pick(NAME_SUFFIXES)
 export const randomDuck = (): Omit<Duck, 'races' | 'titles' | 'bestRank' | 'status'> => ({
   name: randomName(),
   template: pick<Template>(['balanced', 'sprint', 'tank']),
@@ -120,10 +119,11 @@ export const randomDuck = (): Omit<Duck, 'races' | 'titles' | 'bestRank' | 'stat
   cosmetics: { hat: Math.random() < 0.5, shades: Math.random() < 0.4, scarf: Math.random() < 0.3 },
   equippedPartTypeId: null,
 })
-export const statsOf = (t: Template, part?: Part | null): [number, number, number] => {
-  const b = TEMPLATES[t]?.st || TEMPLATES.balanced.st
-  return part ? [b[0] + part.speed, b[1] + part.weight, b[2] + part.boost] : b
+export const calculateDuckStats = (template: Template, part?: Part | null): [number, number, number] => {
+  const base = TEMPLATES[template]?.st || TEMPLATES.balanced.st
+
+  return part ? [base[0] + part.speed, base[1] + part.weight, base[2] + part.boost] : base
 }
-export const titleFor = (rank: number) => (rank === 1 ? 'ABSOLUTE MARVELOUS' : rank <= 3 ? 'PODIUM PADDLER' : rank <= 10 ? 'TOP TEN TORPEDO' : 'BRAVE LITTLE DUCK')
-export const dots = (n: number) => '●●●'.slice(0, n) + '○○○'.slice(0, 3 - n)
-export const sgn = (n: number) => (n > 0 ? '+' + n : n < 0 ? '−' + Math.abs(n) : '0')
+export const titleForRank = (rank: number) => (rank === 1 ? 'ABSOLUTE MARVELOUS' : rank <= 3 ? 'PODIUM PADDLER' : rank <= 10 ? 'TOP TEN TORPEDO' : 'BRAVE LITTLE DUCK')
+export const statDots = (count: number) => '●●●'.slice(0, count) + '○○○'.slice(0, 3 - count)
+export const signedNumber = (value: number) => (value > 0 ? '+' + value : value < 0 ? '−' + Math.abs(value) : '0')

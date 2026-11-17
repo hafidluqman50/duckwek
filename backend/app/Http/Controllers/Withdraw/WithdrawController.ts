@@ -10,21 +10,23 @@ export class WithdrawController extends BaseController {
     super()
   }
 
-  public async prepare(req: IAuthRequest, res: Response): Promise<void> {
+  public async prepare(request: IAuthRequest, response: Response): Promise<void> {
     try {
-      const dto = new WithdrawPrepareRequest({ owner: req.address!, to: req.body.to, amount: req.body.amount }).toDTO()
-      this.ok(res, 'Sign the withdrawal', await this.withdrawService.prepare(dto))
-    } catch (e) {
-      this.fail(res, e)
+      const prepareInput = new WithdrawPrepareRequest({ owner: request.address!, to: request.body.to, amount: request.body.amount }).toDTO()
+
+      this.ok(response, 'Sign the withdrawal', await this.withdrawService.prepare(prepareInput))
+    } catch (error) {
+      this.fail(response, error)
     }
   }
 
-  public async submit(req: IAuthRequest, res: Response): Promise<void> {
+  public async submit(request: IAuthRequest, response: Response): Promise<void> {
     try {
-      const dto = new WithdrawSubmitRequest({ owner: req.address!, withdrawal: req.body.withdrawal, signature: req.body.signature }).toDTO()
-      this.ok(res, 'Withdrawn', await this.withdrawService.submit(dto))
-    } catch (e) {
-      this.fail(res, e)
+      const submitInput = new WithdrawSubmitRequest({ owner: request.address!, withdrawal: request.body.withdrawal, signature: request.body.signature }).toDTO()
+
+      this.ok(response, 'Withdrawn', await this.withdrawService.submit(submitInput))
+    } catch (error) {
+      this.fail(response, error)
     }
   }
 }

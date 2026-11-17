@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Copy compiled ABIs to the frontend after `forge build`, and write the full ABI JSON used by the backend drift check
-# (backend/test/e2e/abi.check.ts compares the signatures in backend/app/Chain/abis.ts with these files).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p ../frontend/lib/abi ../backend/test/e2e/abi

@@ -7,11 +7,9 @@ import type { Grid, RaceResult, RoomState, Settled, Tick } from './types'
 
 export type LivePhase = 'idle' | 'countdown' | 'race' | 'photo' | 'result'
 
-/** The egg of this wallet hatched after its first race. A moment in the UI only: nothing is minted (plan 0013 D2). */
 export interface Hatched { address: string }
 
-/** Everything a phone or the projector needs about one room, live over socket.io. */
-export function useRoomLive(code: string | null, opts: { photoMs?: number } = {}) {
+export function useRoomLive(code: string | null, options: { photoMs?: number } = {}) {
   const [room, setRoom] = useState<RoomState | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [grid, setGrid] = useState<Grid | null>(null)
@@ -25,11 +23,11 @@ export function useRoomLive(code: string | null, opts: { photoMs?: number } = {}
   const [blockGap, setBlockGap] = useState<number | null>(null)
   const [cheers, setCheers] = useState<{ id: number; name: string }[]>([])
   const lastTickAt = useRef(0)
-  const evId = useRef(0)
-  const photoMs = opts.photoMs ?? 2600
+  const eventCounter = useRef(0)
+  const photoMs = options.photoMs ?? 2600
 
-  // A different room (or none) starts from a clean state, so a stale room never shows under the next screen.
   const [seenCode, setSeenCode] = useState(code)
+
   if (seenCode !== code) {
     setSeenCode(code)
     setRoom(null)
@@ -46,52 +44,59 @@ export function useRoomLive(code: string | null, opts: { photoMs?: number } = {}
 
   useEffect(() => {
     if (!code) return
+
     let alive = true
-    fetchRoom(code).then((r) => alive && setRoom(r)).catch((e) => alive && setError(e.message))
-    const off = watchRoom(code, {
-      'room:state': (s: RoomState) => setRoom(s),
-      'room:error': (m: { message: string }) => setError(m.message),
-      'race:grid': (g: Grid) => {
-        setGrid(g)
+
+    fetchRoom(code).then((fetchedRoom) => alive && setRoom(fetchedRoom)).catch((failure) => alive && setError(failure.message))
+
+    const unsubscribe = watchRoom(code, {
+      'room:state': (roomState: RoomState) => setRoom(roomState),
+      'room:error': (payload: { message: string }) => setError(payload.message),
+      'race:grid': (nextGrid: Grid) => {
+        setGrid(nextGrid)
         setTick(null)
         setResult(null)
         setSettled(null)
         setHatched([])
-        setCountdown(g.countdown)
-        setPhase(g.countdown > 0 ? 'countdown' : 'race')
+        setCountdown(nextGrid.countdown)
+        setPhase(nextGrid.countdown > 0 ? 'countdown' : 'race')
       },
       'race:aborted': () => {
         setPhase('idle')
         setGrid(null)
         setCountdown(0)
       },
-      'race:countdown': (m: { n: number }) => setCountdown(m.n),
+      'race:countdown': (payload: { n: number }) => setCountdown(payload.n),
       'race:go': () => {
         setCountdown(0)
         setPhase('race')
       },
-      'race:tick': (t: Tick) => {
+      'race:tick': (nextTick: Tick) => {
         const now = performance.now()
+
         if (lastTickAt.current) setBlockGap(Math.round(now - lastTickAt.current))
+
         lastTickAt.current = now
-        setTick(t)
-        setPhase((p) => (p === 'countdown' || p === 'idle' ? 'race' : p))
-        if (t.ev?.length) {
-          setEvents((list) => [...list.slice(-4), ...t.ev.map((e) => ({ id: ++evId.current, text: e.type === 'leader' ? `${e.name} takes the lead!` : e.type === 'boost' ? `${e.name} BOOST!` : e.name }))])
+        setTick(nextTick)
+        setPhase((current) => (current === 'countdown' || current === 'idle' ? 'race' : current))
+
+        if (nextTick.ev?.length) {
+          setEvents((list) => [...list.slice(-4), ...nextTick.ev.map((raceEvent) => ({ id: ++eventCounter.current, text: raceEvent.type === 'leader' ? `${raceEvent.name} takes the lead!` : raceEvent.type === 'boost' ? `${raceEvent.name} BOOST!` : raceEvent.name }))])
         }
       },
-      'race:result': (r: RaceResult) => {
-        setResult(r)
+      'race:result': (raceResult: RaceResult) => {
+        setResult(raceResult)
         setPhase('photo')
-        setTimeout(() => setPhase((p) => (p === 'photo' ? 'result' : p)), photoMs)
+        setTimeout(() => setPhase((current) => (current === 'photo' ? 'result' : current)), photoMs)
       },
-      'race:settled': (s: Settled) => setSettled(s),
-      'duck:hatched': (h: Hatched) => setHatched((l) => [...l, h]),
-      'race:cheer': (c: { name: string }) => setCheers((l) => [...l.slice(-11), { id: ++evId.current, name: c.name }]),
+      'race:settled': (nextSettled: Settled) => setSettled(nextSettled),
+      'duck:hatched': (hatchedDuck: Hatched) => setHatched((list) => [...list, hatchedDuck]),
+      'race:cheer': (cheer: { name: string }) => setCheers((list) => [...list.slice(-11), { id: ++eventCounter.current, name: cheer.name }]),
     })
+
     return () => {
       alive = false
-      off()
+      unsubscribe()
     }
   }, [code, photoMs])
 

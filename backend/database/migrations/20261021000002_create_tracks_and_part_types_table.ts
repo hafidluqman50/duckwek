@@ -1,10 +1,10 @@
 import { DataTypes } from 'sequelize'
 import type { Migration } from '../umzug'
 
-const ts = { created_at: { type: DataTypes.DATE, allowNull: false }, updated_at: { type: DataTypes.DATE, allowNull: false } }
+const timestamps = { created_at: { type: DataTypes.DATE, allowNull: false }, updated_at: { type: DataTypes.DATE, allowNull: false } }
 
-export const up: Migration = async ({ context: q }) => {
-  await q.createTable('tracks', {
+export const up: Migration = async ({ context: queryInterface }) => {
+  await queryInterface.createTable('tracks', {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     token_id: { type: DataTypes.INTEGER, allowNull: true },
     slug: { type: DataTypes.STRING(64), allowNull: false, unique: true },
@@ -21,9 +21,9 @@ export const up: Migration = async ({ context: q }) => {
     sectors: { type: DataTypes.JSONB, allowNull: false },
     profile: { type: DataTypes.JSONB, allowNull: false },
     status: { type: DataTypes.STRING(16), allowNull: false, defaultValue: 'active' },
-    ...ts,
+    ...timestamps,
   })
-  await q.createTable('part_types', {
+  await queryInterface.createTable('part_types', {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     type_id: { type: DataTypes.INTEGER, allowNull: false, unique: true },
     name: { type: DataTypes.STRING(64), allowNull: false },
@@ -37,11 +37,11 @@ export const up: Migration = async ({ context: q }) => {
     creator: { type: DataTypes.STRING(42), allowNull: false },
     platform: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     status: { type: DataTypes.STRING(16), allowNull: false, defaultValue: 'active' },
-    ...ts,
+    ...timestamps,
   })
 }
 
-export const down: Migration = async ({ context: q }) => {
-  await q.dropTable('part_types')
-  await q.dropTable('tracks')
+export const down: Migration = async ({ context: queryInterface }) => {
+  await queryInterface.dropTable('part_types')
+  await queryInterface.dropTable('tracks')
 }

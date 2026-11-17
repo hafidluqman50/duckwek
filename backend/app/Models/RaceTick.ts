@@ -2,7 +2,6 @@ import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOpt
 import { sequelize } from '@config/database'
 import { Room } from './Room'
 
-/** One row per race block: what the engine computed, and what happened to the on-chain tick transaction. */
 class RaceTick extends Model<InferAttributes<RaceTick>, InferCreationAttributes<RaceTick>> {
   declare id: CreationOptional<number>
   declare room_id: ForeignKey<Room['id']>

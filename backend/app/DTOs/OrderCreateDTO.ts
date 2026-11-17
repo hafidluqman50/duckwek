@@ -10,14 +10,14 @@ export class OrderCreateDTO {
   public roomCode: string | null
   public partTypeId: number | null
 
-  constructor(data: ICreateOrder) {
-    this.payer = data.payer.toLowerCase() as `0x${string}`
-    this.kind = data.kind
-    this.trackId = data.trackId ?? null
-    this.roomName = (data.roomName || 'DuckWek Room').trim()
-    this.maxDucks = data.maxDucks ?? 50
-    this.fillBots = data.fillBots ?? true
-    this.roomCode = data.roomCode ? data.roomCode.toUpperCase() : null
-    this.partTypeId = data.partTypeId ?? null
+  constructor(input: ICreateOrder) {
+    this.payer = input.payer.toLowerCase() as `0x${string}`
+    this.kind = input.kind
+    this.trackId = input.trackId ?? null
+    this.roomName = (input.roomName || 'DuckWek Room').trim()
+    this.maxDucks = input.maxDucks ?? 50
+    this.fillBots = input.fillBots ?? true
+    this.roomCode = input.roomCode ? input.roomCode.toUpperCase() : null
+    this.partTypeId = input.partTypeId ?? null
   }
 }

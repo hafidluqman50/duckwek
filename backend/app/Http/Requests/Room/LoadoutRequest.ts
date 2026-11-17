@@ -17,13 +17,15 @@ export class LoadoutRequest {
       partTypeId: Joi.number().integer().min(0).allow(null),
     })
     const { error } = validationScheme.validate(this.request, { abortEarly: false })
+
     if (error) {
-      throw new BadRequestException('Error Validation', { validations: error.details.map((x) => x.message) })
+      throw new BadRequestException('Error Validation', { validations: error.details.map((detail) => detail.message) })
     }
   }
 
   public toDTO(): LoadoutDTO {
     this.validator()
+
     return new LoadoutDTO(this.request as any)
   }
 }

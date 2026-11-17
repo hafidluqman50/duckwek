@@ -9,13 +9,13 @@ export class DuckUpdateDTO {
   public cosmetics: IUpdateDuck['cosmetics']
   public equippedPartTypeId: number | null
 
-  constructor(data: IUpdateDuck) {
-    this.address = data.address.toLowerCase()
-    this.name = data.name.trim().slice(0, 14)
-    this.template = data.template
-    this.bodyColor = data.bodyColor.toUpperCase()
-    this.billColor = data.billColor.toUpperCase()
-    this.cosmetics = { hat: !!data.cosmetics?.hat, shades: !!data.cosmetics?.shades, scarf: !!data.cosmetics?.scarf }
-    this.equippedPartTypeId = data.equippedPartTypeId ?? null
+  constructor(input: IUpdateDuck) {
+    this.address = input.address.toLowerCase()
+    this.name = input.name.trim().slice(0, 14)
+    this.template = input.template
+    this.bodyColor = input.bodyColor.toUpperCase()
+    this.billColor = input.billColor.toUpperCase()
+    this.cosmetics = { hat: !!input.cosmetics?.hat, shades: !!input.cosmetics?.shades, scarf: !!input.cosmetics?.scarf }
+    this.equippedPartTypeId = input.equippedPartTypeId ?? null
   }
 }

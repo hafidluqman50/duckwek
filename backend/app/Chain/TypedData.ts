@@ -4,7 +4,6 @@ import { addresses } from './Contracts'
 export const TEMPLATE_ID: Record<string, number> = { balanced: 0, sprint: 1, tank: 2 }
 export const KIND = { create_room: 1, join_room: 2, buy_part: 3 } as const
 
-/** The session the player signs once at connect: an EIP-2612 permit on the payment token, spender = the Vault. */
 export const permitTypes = {
   Permit: [
     { name: 'owner', type: 'address' },
@@ -17,7 +16,6 @@ export const permitTypes = {
 
 export const usdcDomain = () => ({ name: env.usdcName, version: env.usdcVersion, chainId: env.chainId, verifyingContract: addresses.usdc })
 
-/** Same struct as DuckWekVault.WITHDRAWAL_TYPEHASH. */
 export const withdrawalTypes = {
   Withdrawal: [
     { name: 'owner', type: 'address' },
@@ -30,6 +28,5 @@ export const withdrawalTypes = {
 
 export const vaultDomain = () => ({ name: 'DuckWekVault', version: '1', chainId: env.chainId, verifyingContract: addresses.vault })
 
-/** JSON-safe form for the API (bigints as strings). The frontend passes it straight to signTypedData. */
-export const jsonify = (v: unknown): unknown =>
-  JSON.parse(JSON.stringify(v, (_k, x) => (typeof x === 'bigint' ? x.toString() : x)))
+export const jsonify = (value: unknown): unknown =>
+  JSON.parse(JSON.stringify(value, (_key, entry) => (typeof entry === 'bigint' ? entry.toString() : entry)))

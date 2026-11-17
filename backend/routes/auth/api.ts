@@ -3,7 +3,7 @@ import { authController } from '@Controllers/Auth'
 
 const authRoute: Express = express()
 
-authRoute.post('/nonce', (req: Request, res: Response): Promise<void> => authController.nonce(req, res))
-authRoute.post('/verify', (req: Request, res: Response): Promise<void> => authController.verify(req, res))
+authRoute.post('/nonce', (request: Request, response: Response): Promise<void> => authController.nonce(request, response))
+authRoute.post('/verify', (request: Request, response: Response): Promise<void> => authController.verify(request, response))
 
 export default authRoute

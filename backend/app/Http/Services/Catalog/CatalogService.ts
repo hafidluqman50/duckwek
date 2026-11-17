@@ -28,7 +28,7 @@ export interface PublicPart {
   speed: number
   weight: number
   boost: number
-  color: string // #RRGGBB, the part's own fill colour (on-chain trait)
+  color: string
   stats: Record<string, number>
   price: string
   creator: string
@@ -37,57 +37,58 @@ export interface PublicPart {
   fit: Record<string, number>
 }
 
-/** How well a part suits each track, 1..3 dots. Derived from the same profile the engine uses. */
-export const fitFor = (p: { speed: number; weight: number; boost: number }, profile: Track['profile']): number => {
-  const score = p.speed * profile.speed - p.weight * profile.weight + p.boost * 0.5 * profile.boost
+export const fitFor = (part: { speed: number; weight: number; boost: number }, profile: Track['profile']): number => {
+  const score = part.speed * profile.speed - part.weight * profile.weight + part.boost * 0.5 * profile.boost
+
   return score >= 1.8 ? 3 : score >= 0.6 ? 2 : 1
 }
 
 export class CatalogService {
   constructor(public catalogRepository: CatalogRepository) {}
 
-  public toTrack(t: Track): PublicTrack {
+  public toTrack(track: Track): PublicTrack {
     return {
-      id: t.token_id,
-      slug: t.slug,
-      name: t.name,
-      description: t.description,
-      rentPrice: String(t.rent_price),
-      laps: t.laps,
-      turns: t.turns,
-      lengthM: t.length_m,
-      closed: t.closed,
-      layoutVersion: t.layout_version,
-      holder: t.holder,
-      path: t.path,
-      sectors: t.sectors,
-      profile: t.profile,
-      platform: t.platform,
-      status: t.status,
+      id: track.token_id,
+      slug: track.slug,
+      name: track.name,
+      description: track.description,
+      rentPrice: String(track.rent_price),
+      laps: track.laps,
+      turns: track.turns,
+      lengthM: track.length_m,
+      closed: track.closed,
+      layoutVersion: track.layout_version,
+      holder: track.holder,
+      path: track.path,
+      sectors: track.sectors,
+      profile: track.profile,
+      platform: track.platform,
+      status: track.status,
     }
   }
 
   public async tracks(): Promise<PublicTrack[]> {
-    return (await this.catalogRepository.tracks()).map((t) => this.toTrack(t))
+    return (await this.catalogRepository.tracks()).map((track) => this.toTrack(track))
   }
 
   public async parts(): Promise<PublicPart[]> {
     const [parts, tracks] = await Promise.all([this.catalogRepository.parts(), this.catalogRepository.tracks()])
-    const active = tracks.filter((t) => t.status === 'active')
-    return parts.map((p) => ({
-      typeId: p.type_id,
-      name: p.name,
-      slot: p.slot,
-      speed: p.speed,
-      weight: p.weight,
-      boost: p.boost,
-      color: '#' + p.color.toString(16).padStart(6, '0').toUpperCase(),
-      stats: p.stats,
-      price: String(p.price),
-      creator: p.creator,
-      platform: p.platform,
-      status: p.status,
-      fit: Object.fromEntries(active.map((t) => [t.slug, p.fit?.[t.slug] ?? fitFor(p, t.profile)])),
+    const active = tracks.filter((track) => track.status === 'active')
+
+    return parts.map((part) => ({
+      typeId: part.type_id,
+      name: part.name,
+      slot: part.slot,
+      speed: part.speed,
+      weight: part.weight,
+      boost: part.boost,
+      color: '#' + part.color.toString(16).padStart(6, '0').toUpperCase(),
+      stats: part.stats,
+      price: String(part.price),
+      creator: part.creator,
+      platform: part.platform,
+      status: part.status,
+      fit: Object.fromEntries(active.map((track) => [track.slug, part.fit?.[track.slug] ?? fitFor(part, track.profile)])),
     }))
   }
 }

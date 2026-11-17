@@ -17,13 +17,15 @@ export class WithdrawSubmitRequest {
       signature: Joi.string().pattern(/^0x[0-9a-fA-F]+$/).required(),
     })
     const { error } = validationScheme.validate(this.request, { abortEarly: false })
+
     if (error) {
-      throw new BadRequestException('Error Validation', { validations: error.details.map((x) => x.message) })
+      throw new BadRequestException('Error Validation', { validations: error.details.map((detail) => detail.message) })
     }
   }
 
   public toDTO(): WithdrawSubmitDTO {
     this.validator()
+
     return new WithdrawSubmitDTO(this.request as any)
   }
 }

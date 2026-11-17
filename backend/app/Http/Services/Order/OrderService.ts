@@ -20,21 +20,13 @@ import { roomEvents } from '@Services/Room/RoomEvents'
 import { AuthNonce } from '@Models/AuthNonce'
 
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
-const ROOMS_PER_10_MIN = 5 // each room costs the relayer one createRoom transaction
+const ROOMS_PER_10_MIN = 5
 
 const TEMPLATE_NAME: Record<number, 'balanced' | 'sprint' | 'tank'> = { 0: 'balanced', 1: 'sprint', 2: 'tank' }
 const SLOT_INDEX: Record<string, number> = { wings: 0, tail: 1, bill: 2 }
 
 export const roomKeyOf = (code: string): Hex => keccak256(toHex(code.toUpperCase()))
 
-/**
- * Paid orders, charged by the Vault under the player's session (the one signature at connect, plan §3.2).
- *  - create_room: 1 USDC circuit rent (50 % circuit owner / 50 % protocol); the host races, so the rent covers the host's entry.
- *  - join_room: 0.10 USDC ticket (50 / 50), batched per room.
- *  - buy_part: part license (85 % creator / 15 % protocol).
- * The price is read from the Vault, the order carries exactly that amount, and nothing can leave the Vault except by the
- * receivers' own withdraw.
- */
 export class OrderService {
   private inflight = new Set<string>()
 
@@ -48,178 +40,205 @@ export class OrderService {
   ) {}
 
   private async newCode(): Promise<string> {
-    for (let i = 0; i < 20; i++) {
-      const code = 'WEK-' + Array.from(crypto.randomBytes(3)).map((b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join('')
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const code = 'WEK-' + Array.from(crypto.randomBytes(3)).map((byte) => CODE_ALPHABET[byte % CODE_ALPHABET.length]).join('')
+
       if (!(await this.roomRepository.codeTaken(code))) return code
     }
+
     throw new ConflictException('Could not allocate a room code')
   }
 
-  /**
-   * The duck this wallet races with, committed on chain with the order (plan 0013 §4.3): the template and the one equipped part
-   * (D6) in its slot. The Vault checks the licence again; checking it here gives a clear error before any gas is spent.
-   */
   private async loadoutOf(address: string): Promise<{ arg: LoadoutArg; partTypeId: number | null }> {
     const duck = await this.duckRepository.byAddress(address)
     const template = TEMPLATE_ID[duck?.template || 'balanced'] ?? 0
     const partBySlot: [number, number, number] = [NO_PART, NO_PART, NO_PART]
     let partTypeId: number | null = null
+
     if (duck?.equipped_part_type_id !== null && duck?.equipped_part_type_id !== undefined) {
       const part = await this.catalogRepository.partByTypeId(duck.equipped_part_type_id)
+
       if (part && (await this.duckRepository.ownsPart(address, part.type_id))) {
         partBySlot[SLOT_INDEX[part.slot]] = part.type_id
         partTypeId = part.type_id
       }
     }
+
     return { arg: { template, partBySlot }, partTypeId }
   }
 
-  /** The session of this player, or a 401 that sends the phone back to connect. */
   private async session(payer: string, price: bigint): Promise<AuthNonce> {
-    const s = await this.authNonceRepository.activeSession(payer)
-    if (!s || !s.signature || s.deadline === null) throw new UnauthorizedException('Session ended, connect again')
-    if (BigInt(s.spent) + price > env.sessionCap) throw new UnauthorizedException('Session spending limit reached, connect again')
-    return s
+    const session = await this.authNonceRepository.activeSession(payer)
+
+    if (!session || !session.signature || session.deadline === null) throw new UnauthorizedException('Session ended, connect again')
+
+    if (BigInt(session.spent) + price > env.sessionCap) throw new UnauthorizedException('Session spending limit reached, connect again')
+
+    return session
   }
 
-  public async create(dto: OrderCreateDTO) {
-    if (dto.kind === 'create_room') return this.createRoom(dto)
-    if (dto.kind === 'join_room') return this.joinRoom(dto)
-    return this.buyPart(dto)
+  public async create(orderInput: OrderCreateDTO) {
+    if (orderInput.kind === 'create_room') return this.createRoom(orderInput)
+
+    if (orderInput.kind === 'join_room') return this.joinRoom(orderInput)
+
+    return this.buyPart(orderInput)
   }
 
   private order(payer: string, kind: number, ref: bigint, roomKey: Hex, loadout: LoadoutArg, amount: bigint): OrderArg {
     return { payer: payer as Address, kind, ref, roomKey, loadout, amount, salt: BigInt('0x' + crypto.randomBytes(16).toString('hex')) }
   }
 
-  /** The permit goes with the first paid order of a session; later orders rely on the allowance it created. */
-  private permitOf(s: AuthNonce) {
-    return s.permit_used ? NO_PERMIT : toPermitArg(env.sessionCap, BigInt(s.deadline!), s.signature as Hex)
+  private permitOf(session: AuthNonce) {
+    return session.permit_used ? NO_PERMIT : toPermitArg(env.sessionCap, BigInt(session.deadline!), session.signature as Hex)
   }
 
-  private async record(dto: OrderCreateDTO, order: OrderArg, s: AuthNonce, roomCode: string | null, label: string) {
+  private async record(orderInput: OrderCreateDTO, order: OrderArg, session: AuthNonce, roomCode: string | null, label: string) {
     return this.paymentRepository.create({
-      kind: dto.kind,
-      payer: dto.payer,
+      kind: orderInput.kind,
+      payer: orderInput.payer,
       amount: order.amount.toString(),
       ref: order.ref.toString(),
       room_code: roomCode,
       nonce: order.salt.toString(),
-      deadline: s.deadline!,
+      deadline: session.deadline!,
       status: 'pending',
       meta: { label },
     })
   }
 
-  private async settle(payment: Awaited<ReturnType<OrderService['record']>>, s: AuthNonce, amount: bigint, txHash: string) {
+  private async settle(payment: Awaited<ReturnType<OrderService['record']>>, session: AuthNonce, amount: bigint, txHash: string) {
     await payment.update({ status: 'confirmed', tx_hash: txHash })
-    await this.authNonceRepository.recordSpend(s, amount)
+    await this.authNonceRepository.recordSpend(session, amount)
     await this.playerRepository.markFirstSpend(payment.payer)
   }
 
-  private async fail(payment: Awaited<ReturnType<OrderService['record']>>, e: unknown): Promise<never> {
-    const msg = (e as any)?.shortMessage || (e as Error).message
-    await payment.update({ status: 'failed', error: msg })
-    throw new BadRequestException('Payment failed: ' + msg)
+  private async fail(payment: Awaited<ReturnType<OrderService['record']>>, error: unknown): Promise<never> {
+    const message = (error as any)?.shortMessage || (error as Error).message
+    await payment.update({ status: 'failed', error: message })
+
+    throw new BadRequestException('Payment failed: ' + message)
   }
 
-  private async createRoom(dto: OrderCreateDTO) {
-    const track = await this.catalogRepository.trackByTokenId(dto.trackId!)
+  private async createRoom(orderInput: OrderCreateDTO) {
+    const track = await this.catalogRepository.trackByTokenId(orderInput.trackId!)
+
     if (!track || track.status !== 'active') throw new BadRequestException('That track is not available yet')
-    const recent = await this.paymentRepository.recentPrepared(dto.payer, 'create_room', 10 * 60_000)
+
+    const recent = await this.paymentRepository.recentPrepared(orderInput.payer, 'create_room', 10 * 60_000)
+
     if (recent >= ROOMS_PER_10_MIN) throw new BadRequestException('Too many rooms created, wait a few minutes')
+
     const price = await chainPrice(KIND.create_room, BigInt(track.token_id!))
-    const s = await this.session(dto.payer, price)
+    const session = await this.session(orderInput.payer, price)
     const code = await this.newCode()
-    const loadout = await this.loadoutOf(dto.payer)
-    const order = this.order(dto.payer, KIND.create_room, BigInt(track.token_id!), roomKeyOf(code), loadout.arg, price)
+    const loadout = await this.loadoutOf(orderInput.payer)
+    const order = this.order(orderInput.payer, KIND.create_room, BigInt(track.token_id!), roomKeyOf(code), loadout.arg, price)
     const label = `Room · ${track.name}`
-    const payment = await this.record(dto, order, s, code, label)
+    const payment = await this.record(orderInput, order, session, code, label)
     let opened
+
     try {
-      opened = await relayer.createRoom(order, this.permitOf(s))
-    } catch (e) {
-      return this.fail(payment, e)
+      opened = await relayer.createRoom(order, this.permitOf(session))
+    } catch (error) {
+      return this.fail(payment, error)
     }
-    await this.settle(payment, s, price, opened.tx.hash)
+
+    await this.settle(payment, session, price, opened.tx.hash)
     const room = await this.roomRepository.create({
       code,
       room_key: roomKeyOf(code),
-      name: dto.roomName,
-      host: dto.payer,
+      name: orderInput.roomName,
+      host: orderInput.payer,
       track_id: track.id,
-      max_ducks: dto.maxDucks,
-      fill_bots: dto.fillBots,
+      max_ducks: orderInput.maxDucks,
+      fill_bots: orderInput.fillBots,
       status: 'lobby',
       chain_room_id: String(opened.chainRoomId),
       create_tx: opened.tx.hash,
     })
-    await this.addPlayerFromProfile(room.id, dto.payer, opened.tx.hash, TEMPLATE_NAME[loadout.arg.template] ?? 'balanced', loadout.partTypeId)
+    await this.addPlayerFromProfile(room.id, orderInput.payer, opened.tx.hash, TEMPLATE_NAME[loadout.arg.template] ?? 'balanced', loadout.partTypeId)
     roomEvents.emit('room:changed', room.code)
-    return { tx: opened.tx.hash, url: opened.tx.url, kind: dto.kind, label, amount: price.toString(), roomCode: code }
+
+    return { tx: opened.tx.hash, url: opened.tx.url, kind: orderInput.kind, label, amount: price.toString(), roomCode: code }
   }
 
-  private async joinRoom(dto: OrderCreateDTO) {
-    const room = await this.roomRepository.byCode(dto.roomCode!)
+  private async joinRoom(orderInput: OrderCreateDTO) {
+    const room = await this.roomRepository.byCode(orderInput.roomCode!)
+
     if (!room || room.status === 'pending') throw new NotFoundException('Room not found')
+
     if (room.status === 'closed') throw new BadRequestException('This room is closed')
+
     if (room.status !== 'lobby') throw new BadRequestException('This race already started')
-    if (room.host === dto.payer || (await this.roomRepository.player(room.id, dto.payer))) return { alreadyIn: true, roomCode: room.code }
+
+    if (room.host === orderInput.payer || (await this.roomRepository.player(room.id, orderInput.payer))) return { alreadyIn: true, roomCode: room.code }
+
     if ((await this.roomRepository.countPlayers(room.id)) >= room.max_ducks) throw new BadRequestException('Room is full')
+
     if (!room.chain_room_id) throw new BadRequestException('This room has no on-chain id')
+
     const price = await chainPrice(KIND.join_room, 0n)
-    const s = await this.session(dto.payer, price)
-    const key = `${room.code}:${dto.payer}`
+    const session = await this.session(orderInput.payer, price)
+    const key = `${room.code}:${orderInput.payer}`
+
     if (this.inflight.has(key)) throw new ConflictException('Payment already pending')
+
     this.inflight.add(key)
     const label = `Ticket · ${room.code}`
-    const loadout = await this.loadoutOf(dto.payer)
-    const order = this.order(dto.payer, KIND.join_room, 0n, room.room_key as Hex, loadout.arg, price)
-    const payment = await this.record(dto, order, s, room.code, label)
-    let tx
+    const loadout = await this.loadoutOf(orderInput.payer)
+    const order = this.order(orderInput.payer, KIND.join_room, 0n, room.room_key as Hex, loadout.arg, price)
+    const payment = await this.record(orderInput, order, session, room.code, label)
+    let transaction
+
     try {
-      tx = await joinBatcher.submit(Number(room.chain_room_id), order, this.permitOf(s))
-    } catch (e) {
-      return this.fail(payment, e)
+      transaction = await joinBatcher.submit(Number(room.chain_room_id), order, this.permitOf(session))
+    } catch (error) {
+      return this.fail(payment, error)
     } finally {
       this.inflight.delete(key)
     }
-    await this.settle(payment, s, price, tx.hash)
-    await this.addPlayerFromProfile(room.id, dto.payer, tx.hash, TEMPLATE_NAME[loadout.arg.template] ?? 'balanced', loadout.partTypeId)
+
+    await this.settle(payment, session, price, transaction.hash)
+    await this.addPlayerFromProfile(room.id, orderInput.payer, transaction.hash, TEMPLATE_NAME[loadout.arg.template] ?? 'balanced', loadout.partTypeId)
     roomEvents.emit('room:changed', room.code)
-    return { tx: tx.hash, url: tx.url, kind: dto.kind, label, amount: price.toString(), roomCode: room.code }
+
+    return { tx: transaction.hash, url: transaction.url, kind: orderInput.kind, label, amount: price.toString(), roomCode: room.code }
   }
 
-  private async buyPart(dto: OrderCreateDTO) {
-    const part = await this.catalogRepository.partByTypeId(dto.partTypeId!)
+  private async buyPart(orderInput: OrderCreateDTO) {
+    const part = await this.catalogRepository.partByTypeId(orderInput.partTypeId!)
+
     if (!part || part.status !== 'active') throw new BadRequestException('That part is not for sale')
-    if (await this.duckRepository.ownsPart(dto.payer, part.type_id)) throw new BadRequestException('You already own that part')
+
+    if (await this.duckRepository.ownsPart(orderInput.payer, part.type_id)) throw new BadRequestException('You already own that part')
+
     const price = await chainPrice(KIND.buy_part, BigInt(part.type_id))
-    const s = await this.session(dto.payer, price)
+    const session = await this.session(orderInput.payer, price)
     const label = `Part · ${part.name}`
-    const order = this.order(dto.payer, KIND.buy_part, BigInt(part.type_id), `0x${'0'.repeat(64)}`, EMPTY_LOADOUT, price)
-    const payment = await this.record(dto, order, s, null, label)
+    const order = this.order(orderInput.payer, KIND.buy_part, BigInt(part.type_id), `0x${'0'.repeat(64)}`, EMPTY_LOADOUT, price)
+    const payment = await this.record(orderInput, order, session, null, label)
     let bought
+
     try {
-      bought = await relayer.buyPart(order, this.permitOf(s))
-    } catch (e) {
-      return this.fail(payment, e)
+      bought = await relayer.buyPart(order, this.permitOf(session))
+    } catch (error) {
+      return this.fail(payment, error)
     }
-    await this.settle(payment, s, price, bought.tx.hash)
-    await this.duckRepository.addLicense({ address: dto.payer, type_id: part.type_id, token_id: bought.tokenId, tx_hash: bought.tx.hash })
-    return { tx: bought.tx.hash, url: bought.tx.url, kind: dto.kind, label, amount: price.toString(), partTypeId: part.type_id, tokenId: bought.tokenId }
+
+    await this.settle(payment, session, price, bought.tx.hash)
+    await this.duckRepository.addLicense({ address: orderInput.payer, type_id: part.type_id, token_id: bought.tokenId, tx_hash: bought.tx.hash })
+
+    return { tx: bought.tx.hash, url: bought.tx.url, kind: orderInput.kind, label, amount: price.toString(), partTypeId: part.type_id, tokenId: bought.tokenId }
   }
 
-  /** Snapshot the player's duck into the room. The template and the part are the ones committed on chain with the order and
-   *  never change afterwards; a brand-new player without a duck yet gets a placeholder name and colours that are replaced the
-   *  moment they keep their duck (duck:updated). */
   private async addPlayerFromProfile(roomId: number, address: string, joinTx: string | null, template: 'balanced' | 'sprint' | 'tank', partTypeId: number | null) {
     const duck = await this.duckRepository.byAddress(address)
     await this.roomRepository.addPlayer({
       room_id: roomId,
       address,
       duck_name: duck?.name || 'New duck',
-      template, // the template that was recorded on-chain with the order
+      template,
       body_color: duck?.body_color || '#FFFFFF',
       bill_color: duck?.bill_color || '#FF9F1C',
       cosmetics: duck?.cosmetics || { hat: false, shades: false, scarf: false },

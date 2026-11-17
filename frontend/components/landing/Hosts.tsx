@@ -1,6 +1,5 @@
 import Link from 'next/link'
 
-/** The projector mock is a preview with sample values, not a live room. */
 export function Hosts() {
   return (
     <section id="host" className="border-y-[6px] border-black bg-monad text-ink">

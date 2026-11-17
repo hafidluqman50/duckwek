@@ -2,8 +2,8 @@ import { Op } from 'sequelize'
 import { Payment } from '@Models/Payment'
 
 export class PaymentRepository {
-  public async create(data: Partial<Payment> & { kind: Payment['kind']; payer: string; amount: string; nonce: string; deadline: string }): Promise<Payment> {
-    return Payment.create(data as any)
+  public async create(attributes: Partial<Payment> & { kind: Payment['kind']; payer: string; amount: string; nonce: string; deadline: string }): Promise<Payment> {
+    return Payment.create(attributes as any)
   }
 
   public async byId(id: number): Promise<Payment | null> {

@@ -9,28 +9,29 @@ export class ProfileController extends BaseController {
     super()
   }
 
-  public async me(req: IAuthRequest, res: Response): Promise<void> {
+  public async me(request: IAuthRequest, response: Response): Promise<void> {
     try {
-      this.ok(res, 'Success Get Profile!', await this.profileService.me(req.address!))
-    } catch (e) {
-      this.fail(res, e)
+      this.ok(response, 'Success Get Profile!', await this.profileService.me(request.address!))
+    } catch (error) {
+      this.fail(response, error)
     }
   }
 
-  public async updateDuck(req: IAuthRequest, res: Response): Promise<void> {
+  public async updateDuck(request: IAuthRequest, response: Response): Promise<void> {
     try {
-      const dto = new DuckUpdateRequest({
-        address: req.address!,
-        name: req.body.name,
-        template: req.body.template,
-        bodyColor: req.body.bodyColor,
-        billColor: req.body.billColor,
-        cosmetics: req.body.cosmetics,
-        equippedPartTypeId: req.body.equippedPartTypeId ?? null,
+      const duckUpdateInput = new DuckUpdateRequest({
+        address: request.address!,
+        name: request.body.name,
+        template: request.body.template,
+        bodyColor: request.body.bodyColor,
+        billColor: request.body.billColor,
+        cosmetics: request.body.cosmetics,
+        equippedPartTypeId: request.body.equippedPartTypeId ?? null,
       }).toDTO()
-      this.ok(res, 'Duck saved', await this.profileService.updateDuck(dto))
-    } catch (e) {
-      this.fail(res, e)
+
+      this.ok(response, 'Duck saved', await this.profileService.updateDuck(duckUpdateInput))
+    } catch (error) {
+      this.fail(response, error)
     }
   }
 }

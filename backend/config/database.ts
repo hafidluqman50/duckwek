@@ -1,6 +1,5 @@
 import { Sequelize } from 'sequelize'
 
-// Supabase (and most hosted Postgres) requires TLS: set PGSSL=true.
 export const sequelize = new Sequelize(
   process.env.PGDATABASE || 'duckwek',
   process.env.PGUSER || 'postgres',
@@ -11,7 +10,7 @@ export const sequelize = new Sequelize(
     dialect: 'postgres',
     logging: false,
     define: { underscored: true, timestamps: true },
-    pool: { max: 8, min: 2, idle: 30_000 }, // warm connections: a new TLS connection to a remote database costs hundreds of ms
+    pool: { max: 8, min: 2, idle: 30_000 },
     dialectOptions: process.env.PGSSL === 'true' ? { ssl: { require: true, rejectUnauthorized: false } } : {},
   },
 )
@@ -20,8 +19,9 @@ export const connectDatabase = async (): Promise<void> => {
   try {
     await sequelize.authenticate()
     console.log('======================== DATABASE CONNECTED! ========================')
-  } catch (e) {
+  } catch (error) {
     console.log('======================== DATABASE DISCONNECTED! ========================')
-    throw e
+
+    throw error
   }
 }

@@ -9,7 +9,6 @@ import '@fontsource/jetbrains-mono/700.css'
 import './globals.css'
 import { Providers } from './providers'
 
-
 export const metadata: Metadata = {
   title: 'DuckWek · live duck racing on Monad',
   description: 'Scan, connect, race. One race step per Monad block. USDC only, gas on us, no prize pool.',

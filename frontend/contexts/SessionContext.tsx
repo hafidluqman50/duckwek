@@ -14,7 +14,7 @@ import { createOrder, type OrderBody, type OrderResult } from '@/http/orders/ord
 import { openPasskeyWallet, deviceWallet } from '@/lib/passkey'
 import { appChain } from '@/lib/wagmi'
 import { sound } from '@/lib/sound'
-import { usdc } from '@/lib/config'
+import { formatUsdc } from '@/lib/config'
 import type { Me, Part, Track } from '@/lib/types'
 
 type SignerKind = 'wallet' | 'passkey' | 'device'
@@ -22,12 +22,12 @@ interface Signer {
   kind: SignerKind
   label: string
   address: `0x${string}`
-  signTypedData: (td: any) => Promise<Hex>
+  signTypedData: (typedData: any) => Promise<Hex>
 }
 
 export interface Sheet {
   title: string
-  rows: { k: string; v: string }[]
+  rows: { label: string; value: string }[]
   status: 'review' | 'pending' | 'done'
   pendingLabel: string
   doneLabel: string
@@ -46,7 +46,7 @@ interface SessionState {
   sheet: Sheet | null
   toast: string
   connecting: string | null
-  say: (t: string, ms?: number) => void
+  say: (text: string, milliseconds?: number) => void
   refresh: () => Promise<Me | null>
   connectWallet: () => void
   connectPasskey: () => Promise<boolean>
@@ -57,17 +57,20 @@ interface SessionState {
   signOut: () => void
 }
 
-const Ctx = createContext<SessionState | null>(null)
+const SessionStateContext = createContext<SessionState | null>(null)
+
 export const useSession = () => {
-  const c = useContext(Ctx)
-  if (!c) throw new Error('useSession outside provider')
-  return c
+  const session = useContext(SessionStateContext)
+
+  if (!session) throw new Error('useSession outside provider')
+
+  return session
 }
 
-const BIG = ['value', 'nonce', 'deadline', 'amount', 'ref']
-const revive = (td: any) => JSON.parse(JSON.stringify(td), (k, v) => (BIG.includes(k) && typeof v === 'string' && /^\d+$/.test(v) ? BigInt(v) : v))
+const BIG_NUMBER_KEYS = ['value', 'nonce', 'deadline', 'amount', 'ref']
+const reviveBigNumbers = (typedData: any) => JSON.parse(JSON.stringify(typedData), (key, value) => (BIG_NUMBER_KEYS.includes(key) && typeof value === 'string' && /^\d+$/.test(value) ? BigInt(value) : value))
 const SIGNER_KEY = 'duckwek.signer'
-const PK_SESSION = 'duckwek.pk'
+const PASSKEY_SESSION_KEY = 'duckwek.pk'
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const config = useConfig()
@@ -82,116 +85,135 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [sheet, setSheet] = useState<Sheet | null>(null)
   const [toast, setToast] = useState('')
   const [connecting, setConnecting] = useState<string | null>(null)
-  const sheetWait = useRef<{ ok: () => void; no: (e: Error) => void } | null>(null)
+  const sheetDecision = useRef<{ confirm: () => void; reject: (error: Error) => void } | null>(null)
   const wantWalletSignIn = useRef(false)
-  const toastT = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const say = useCallback((t: string, ms = 2000) => {
-    setToast(t)
-    if (toastT.current) clearTimeout(toastT.current)
-    toastT.current = setTimeout(() => setToast(''), ms)
+  const say = useCallback((text: string, milliseconds = 2000) => {
+    setToast(text)
+
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+
+    toastTimer.current = setTimeout(() => setToast(''), milliseconds)
   }, [])
 
   const localSigner = (key: Hex, kind: 'passkey' | 'device'): Signer => {
-    const acc = privateKeyToAccount(key)
+    const localAccount = privateKeyToAccount(key)
+
     return {
       kind,
       label: kind === 'passkey' ? 'Passkey wallet' : 'Device wallet',
-      address: acc.address.toLowerCase() as `0x${string}`,
-      signTypedData: (td) => acc.signTypedData(revive(td)),
+      address: localAccount.address.toLowerCase() as `0x${string}`,
+      signTypedData: (typedData) => localAccount.signTypedData(reviveBigNumbers(typedData)),
     }
   }
 
-  const walletSigner = useCallback((addr: `0x${string}`, name: string): Signer => ({
+  const walletSigner = useCallback((walletAddress: `0x${string}`, name: string): Signer => ({
     kind: 'wallet',
     label: name || 'Wallet',
-    address: addr.toLowerCase() as `0x${string}`,
-    signTypedData: async (td) => {
+    address: walletAddress.toLowerCase() as `0x${string}`,
+    signTypedData: async (typedData) => {
       if (getAccount(config).chainId !== appChain.id) await switchChain(config, { chainId: appChain.id })
-      return wagmiSignTypedData(config, revive(td))
+
+      return wagmiSignTypedData(config, reviveBigNumbers(typedData))
     },
   }), [config])
 
   const refresh = useCallback(async () => {
     if (!tokenStore.get()) return null
+
     try {
-      const m = await fetchMe()
-      setMe(m)
-      return m
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 401) {
+      const profile = await fetchMe()
+
+      setMe(profile)
+
+      return profile
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
         tokenStore.set(null)
         setMe(null)
         setSigner(null)
       }
+
       return null
     }
   }, [])
 
-  // Boot: catalog + restore session
   useEffect(() => {
     sound.load()
     Promise.all([fetchTracks().then(setTracks), fetchParts().then(setParts)]).catch(() => undefined)
+
     const kind = localStorage.getItem(SIGNER_KEY) as SignerKind | null
+
     if (kind === 'device') setSigner(localSigner(deviceWallet().key, 'device'))
+
     if (kind === 'passkey') {
-      const k = sessionStorage.getItem(PK_SESSION) as Hex | null
-      if (k) setSigner(localSigner(k, 'passkey'))
+      const passkeyKey = sessionStorage.getItem(PASSKEY_SESSION_KEY) as Hex | null
+
+      if (passkeyKey) setSigner(localSigner(passkeyKey, 'passkey'))
     }
+
     refresh().finally(() => setReady(true))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Keep a wallet signer in sync with wagmi
   useEffect(() => {
     if (account.status === 'connected' && account.address) {
       const kind = localStorage.getItem(SIGNER_KEY)
+
       if (kind === 'wallet' || wantWalletSignIn.current) setSigner(walletSigner(account.address, account.connector?.name || 'Wallet'))
     }
   }, [account.status, account.address, account.connector, walletSigner])
 
-  // Promise-based signature sheet
-  const askSheet = useCallback((s: Omit<Sheet, 'status'>) => new Promise<void>((ok, no) => {
-    sheetWait.current = { ok, no }
-    setSheet({ ...s, status: 'review' })
+  const askSheet = useCallback((content: Omit<Sheet, 'status'>) => new Promise<void>((confirm, reject) => {
+    sheetDecision.current = { confirm, reject }
+    setSheet({ ...content, status: 'review' })
   }), [])
-  const confirmSheet = useCallback(() => sheetWait.current?.ok(), [])
+
+  const confirmSheet = useCallback(() => sheetDecision.current?.confirm(), [])
+
   const cancelSheet = useCallback(() => {
-    sheetWait.current?.no(new Error('cancelled'))
-    sheetWait.current = null
+    sheetDecision.current?.reject(new Error('cancelled'))
+    sheetDecision.current = null
     setSheet(null)
     say('Cancelled')
   }, [say])
-  const sheetStatus = (patch: Partial<Sheet>) => setSheet((s) => (s ? { ...s, ...patch } : s))
 
-  const signIn = useCallback(async (s: Signer) => {
-    await askSheet({ title: 'Sign in to DuckWek', rows: [{ k: 'Signature', v: 'One signature, valid 24 h' }, { k: 'Spending limit', v: 'Up to 5 USDC · DuckWek only' }, { k: 'Network fee', v: '0 · sponsored' }], pendingLabel: 'Signing you in…', doneLabel: 'Signed in', walletLabel: s.label })
+  const sheetStatus = (patch: Partial<Sheet>) => setSheet((current) => (current ? { ...current, ...patch } : current))
+
+  const signIn = useCallback(async (signingSigner: Signer) => {
+    await askSheet({ title: 'Sign in to DuckWek', rows: [{ label: 'Signature', value: 'One signature, valid 24 h' }, { label: 'Spending limit', value: 'Up to 5 USDC · DuckWek only' }, { label: 'Network fee', value: '0 · sponsored' }], pendingLabel: 'Signing you in…', doneLabel: 'Signed in', walletLabel: signingSigner.label })
     sheetStatus({ status: 'pending' })
+
     try {
-      const { session } = await fetchNonce(s.address)
-      const signature = await s.signTypedData(session)
-      const r = await verifySignature(s.address, signature)
-      tokenStore.set(r.token)
-      localStorage.setItem(SIGNER_KEY, s.kind)
-      setSigner(s)
+      const { session } = await fetchNonce(signingSigner.address)
+      const signature = await signingSigner.signTypedData(session)
+      const verification = await verifySignature(signingSigner.address, signature)
+
+      tokenStore.set(verification.token)
+      localStorage.setItem(SIGNER_KEY, signingSigner.kind)
+      setSigner(signingSigner)
       sound.play('sign')
       sheetStatus({ status: 'done' })
-      await new Promise((res) => setTimeout(res, 700))
+      await new Promise((resolve) => setTimeout(resolve, 700))
       setSheet(null)
-      const m = await refresh()
-      if (r.isNew) say('Welcome! 5 test USDC are yours on your first order', 2600)
-      return m
-    } catch (e) {
+
+      const profile = await refresh()
+
+      if (verification.isNew) say('Welcome! 5 test USDC are yours on your first order', 2600)
+
+      return profile
+    } catch (error) {
       setSheet(null)
       sound.play('error')
-      say((e as Error).message.includes('rejected') ? 'Signature cancelled' : (e as Error).message, 2600)
-      throw e
+      say((error as Error).message.includes('rejected') ? 'Signature cancelled' : (error as Error).message, 2600)
+
+      throw error
     } finally {
-      sheetWait.current = null
+      sheetDecision.current = null
     }
   }, [askSheet, refresh, say])
 
-  // After the RainbowKit modal connects, continue with sign-in once
   useEffect(() => {
     if (wantWalletSignIn.current && account.status === 'connected' && account.address) {
       wantWalletSignIn.current = false
@@ -203,6 +225,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const connectWallet = useCallback(() => {
     sound.unlock()
     wantWalletSignIn.current = true
+
     if (account.status === 'connected' && account.address) {
       wantWalletSignIn.current = false
       signIn(walletSigner(account.address, account.connector?.name || 'Wallet')).catch(() => undefined)
@@ -212,15 +235,21 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const connectPasskey = useCallback(async () => {
     sound.unlock()
     setConnecting('Passkey')
+
     try {
-      const w = await openPasskeyWallet()
-      if (w.kind === 'passkey') sessionStorage.setItem(PK_SESSION, w.key)
+      const localWallet = await openPasskeyWallet()
+
+      if (localWallet.kind === 'passkey') sessionStorage.setItem(PASSKEY_SESSION_KEY, localWallet.key)
+
       setConnecting(null)
-      await signIn(localSigner(w.key, w.kind))
+      await signIn(localSigner(localWallet.key, localWallet.kind))
+
       return true
-    } catch (e) {
+    } catch (error) {
       setConnecting(null)
-      if (!(e as Error).message.includes('cancelled')) say((e as Error).message)
+
+      if (!(error as Error).message.includes('cancelled')) say((error as Error).message)
+
       return false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -229,55 +258,67 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const pay = useCallback(async (body: OrderBody) => {
     if (!signer) {
       say('Connect first')
+
       return null
     }
+
     try {
-      const r = await createOrder(body)
-      if (r.alreadyIn) return { alreadyIn: true as const, roomCode: r.roomCode ?? null }
+      const order = await createOrder(body)
+
+      if (order.alreadyIn) return { alreadyIn: true as const, roomCode: order.roomCode ?? null }
+
       sound.play('coin')
-      say(`Paid ${usdc(r.amount)} USDC · confirmed on Monad`, 2200)
+      say(`Paid ${formatUsdc(order.amount)} USDC · confirmed on Monad`, 2200)
       refresh()
-      return r
-    } catch (e) {
+
+      return order
+    } catch (error) {
       sound.play('error')
-      say((e as Error).message, 3000)
-      // The session (the one signature) ended or hit its limit: sign in again.
-      if (e instanceof ApiError && e.status === 401) {
+      say((error as Error).message, 3000)
+
+      if (error instanceof ApiError && error.status === 401) {
         tokenStore.set(null)
         setMe(null)
         setSigner(null)
       }
-      throw e
+
+      throw error
     }
   }, [signer, refresh, say])
 
   const withdraw = useCallback(async () => {
     if (!signer) return
+
     try {
-      const p = await prepareWithdraw()
-      await askSheet({ title: 'Withdraw earnings', rows: [{ k: 'Amount', v: `${usdc(p.withdrawal.amount)} USDC` }, { k: 'To', v: 'Your wallet' }, { k: 'Network fee', v: '0 · sponsored' }], pendingLabel: 'Relayer submitting…', doneLabel: 'Withdrawn', walletLabel: signer.label })
+      const preparation = await prepareWithdraw()
+
+      await askSheet({ title: 'Withdraw earnings', rows: [{ label: 'Amount', value: `${formatUsdc(preparation.withdrawal.amount)} USDC` }, { label: 'To', value: 'Your wallet' }, { label: 'Network fee', value: '0 · sponsored' }], pendingLabel: 'Relayer submitting…', doneLabel: 'Withdrawn', walletLabel: signer.label })
       sheetStatus({ status: 'pending' })
-      const sig = await signer.signTypedData(p.typedData)
-      const r = await submitWithdraw(p.withdrawal, sig)
+
+      const signature = await signer.signTypedData(preparation.typedData)
+      const submission = await submitWithdraw(preparation.withdrawal, signature)
+
       sound.play('coin')
-      sheetStatus({ status: 'done', tx: r.tx })
-      await new Promise((res) => setTimeout(res, 900))
+      sheetStatus({ status: 'done', tx: submission.tx })
+      await new Promise((resolve) => setTimeout(resolve, 900))
       setSheet(null)
       refresh()
-    } catch (e) {
+    } catch (error) {
       setSheet(null)
-      if ((e as Error).message !== 'cancelled') say((e as Error).message, 2600)
+
+      if ((error as Error).message !== 'cancelled') say((error as Error).message, 2600)
     } finally {
-      sheetWait.current = null
+      sheetDecision.current = null
     }
   }, [signer, askSheet, refresh, say])
 
   const signOut = useCallback(() => {
     tokenStore.set(null)
     localStorage.removeItem(SIGNER_KEY)
-    sessionStorage.removeItem(PK_SESSION)
+    sessionStorage.removeItem(PASSKEY_SESSION_KEY)
     setMe(null)
     setSigner(null)
+
     if (account.status === 'connected') disconnect()
   }, [account.status, disconnect])
 
@@ -290,5 +331,5 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     say, refresh, connectWallet, connectPasskey, pay, withdraw, confirmSheet, cancelSheet, signOut,
   }), [ready, signer, me, tracks, parts, sheet, toast, connecting, say, refresh, connectWallet, connectPasskey, pay, withdraw, confirmSheet, cancelSheet, signOut])
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
+  return <SessionStateContext.Provider value={value}>{children}</SessionStateContext.Provider>
 }

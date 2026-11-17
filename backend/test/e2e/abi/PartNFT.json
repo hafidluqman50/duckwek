@@ -359,7 +359,7 @@
     ],
     "outputs": [
       {
-        "name": "id",
+        "name": "tokenId",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -711,7 +711,7 @@
     "name": "setRenderer",
     "inputs": [
       {
-        "name": "r",
+        "name": "renderer_",
         "type": "address",
         "internalType": "address"
       }
@@ -780,7 +780,7 @@
     "name": "supportsInterface",
     "inputs": [
       {
-        "name": "id",
+        "name": "interfaceId",
         "type": "bytes4",
         "internalType": "bytes4"
       }
@@ -812,7 +812,7 @@
     "name": "tokenURI",
     "inputs": [
       {
-        "name": "id",
+        "name": "tokenId",
         "type": "uint256",
         "internalType": "uint256"
       }

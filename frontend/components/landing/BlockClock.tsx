@@ -1,10 +1,10 @@
 const BLOCKS = [
-  { n: '…+1', label: 'start', bg: 'bg-white' },
-  { n: '…+2', label: 'tick', bg: 'bg-white' },
-  { n: '…+3', label: 'tick', bg: 'bg-white' },
-  { n: '…+4', label: 'cheer', bg: 'bg-duck' },
-  { n: '…+5', label: 'tick', bg: 'bg-white' },
-  { n: '…+6', label: 'tick', bg: 'bg-lilac' },
+  { offset: '…+1', label: 'start', background: 'bg-white' },
+  { offset: '…+2', label: 'tick', background: 'bg-white' },
+  { offset: '…+3', label: 'tick', background: 'bg-white' },
+  { offset: '…+4', label: 'cheer', background: 'bg-duck' },
+  { offset: '…+5', label: 'tick', background: 'bg-white' },
+  { offset: '…+6', label: 'tick', background: 'bg-lilac' },
 ]
 
 export function BlockClock() {
@@ -19,11 +19,11 @@ export function BlockClock() {
       </div>
       <div className="flex min-w-0 flex-[1_1_320px] flex-col gap-4 md:flex-[1_1_520px]">
         <div className="flex gap-2.5 overflow-hidden py-1">
-          {BLOCKS.map((b) => (
-            <div key={b.n} data-clock-block className={`${b.bg} flex w-[110px] flex-none flex-col gap-1 rounded-[18px] border-4 border-black p-3 text-ink shadow-[0_6px_0_#000]`}>
+          {BLOCKS.map((block) => (
+            <div key={block.offset} data-clock-block className={`${block.background} flex w-[110px] flex-none flex-col gap-1 rounded-[18px] border-4 border-black p-3 text-ink shadow-[0_6px_0_#000]`}>
               <div className="text-[11px] font-black tracking-wide">BLOCK</div>
-              <div className="font-mono text-[15px] font-bold">{b.n}</div>
-              <div className="text-xs font-extrabold">{b.label}</div>
+              <div className="font-mono text-[15px] font-bold">{block.offset}</div>
+              <div className="text-xs font-extrabold">{block.label}</div>
             </div>
           ))}
         </div>

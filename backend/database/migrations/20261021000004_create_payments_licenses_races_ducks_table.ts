@@ -1,10 +1,10 @@
 import { DataTypes } from 'sequelize'
 import type { Migration } from '../umzug'
 
-const ts = { created_at: { type: DataTypes.DATE, allowNull: false }, updated_at: { type: DataTypes.DATE, allowNull: false } }
+const timestamps = { created_at: { type: DataTypes.DATE, allowNull: false }, updated_at: { type: DataTypes.DATE, allowNull: false } }
 
-export const up: Migration = async ({ context: q }) => {
-  await q.createTable('payments', {
+export const up: Migration = async ({ context: queryInterface }) => {
+  await queryInterface.createTable('payments', {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     kind: { type: DataTypes.STRING(16), allowNull: false },
     payer: { type: DataTypes.STRING(42), allowNull: false },
@@ -17,19 +17,19 @@ export const up: Migration = async ({ context: q }) => {
     status: { type: DataTypes.STRING(16), allowNull: false, defaultValue: 'prepared' },
     error: { type: DataTypes.TEXT, allowNull: true },
     meta: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
-    ...ts,
+    ...timestamps,
   })
-  await q.addIndex('payments', ['payer', 'nonce'], { unique: true })
-  await q.createTable('part_licenses', {
+  await queryInterface.addIndex('payments', ['payer', 'nonce'], { unique: true })
+  await queryInterface.createTable('part_licenses', {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     address: { type: DataTypes.STRING(42), allowNull: false },
     type_id: { type: DataTypes.INTEGER, allowNull: false },
     token_id: { type: DataTypes.STRING(78), allowNull: false },
     tx_hash: { type: DataTypes.STRING(66), allowNull: false },
-    ...ts,
+    ...timestamps,
   })
-  await q.addIndex('part_licenses', ['address'])
-  await q.createTable('races', {
+  await queryInterface.addIndex('part_licenses', ['address'])
+  await queryInterface.createTable('races', {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     room_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'rooms', key: 'id' }, onDelete: 'CASCADE' },
     race_id: { type: DataTypes.BIGINT, allowNull: false },
@@ -41,9 +41,9 @@ export const up: Migration = async ({ context: q }) => {
     results_root: { type: DataTypes.STRING(66), allowNull: true },
     settle_tx: { type: DataTypes.STRING(66), allowNull: true },
     status: { type: DataTypes.STRING(16), allowNull: false, defaultValue: 'running' },
-    ...ts,
+    ...timestamps,
   })
-  await q.createTable('ducks', {
+  await queryInterface.createTable('ducks', {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     address: { type: DataTypes.STRING(42), allowNull: false, unique: true },
     name: { type: DataTypes.STRING(14), allowNull: false },
@@ -58,9 +58,9 @@ export const up: Migration = async ({ context: q }) => {
     status: { type: DataTypes.STRING(16), allowNull: false, defaultValue: 'egg' },
     token_id: { type: DataTypes.STRING(78), allowNull: true },
     tx_hash: { type: DataTypes.STRING(66), allowNull: true },
-    ...ts,
+    ...timestamps,
   })
-  await q.createTable('titles', {
+  await queryInterface.createTable('titles', {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     address: { type: DataTypes.STRING(42), allowNull: false },
     room_code: { type: DataTypes.STRING(12), allowNull: false },
@@ -68,15 +68,15 @@ export const up: Migration = async ({ context: q }) => {
     rank: { type: DataTypes.INTEGER, allowNull: false },
     title: { type: DataTypes.STRING(32), allowNull: false },
     tx_hash: { type: DataTypes.STRING(66), allowNull: true },
-    ...ts,
+    ...timestamps,
   })
-  await q.addIndex('titles', ['address'])
+  await queryInterface.addIndex('titles', ['address'])
 }
 
-export const down: Migration = async ({ context: q }) => {
-  await q.dropTable('titles')
-  await q.dropTable('ducks')
-  await q.dropTable('races')
-  await q.dropTable('part_licenses')
-  await q.dropTable('payments')
+export const down: Migration = async ({ context: queryInterface }) => {
+  await queryInterface.dropTable('titles')
+  await queryInterface.dropTable('ducks')
+  await queryInterface.dropTable('races')
+  await queryInterface.dropTable('part_licenses')
+  await queryInterface.dropTable('payments')
 }

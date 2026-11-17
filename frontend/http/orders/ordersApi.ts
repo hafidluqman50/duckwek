@@ -18,5 +18,4 @@ export interface OrderResult {
   equipped?: boolean
 }
 
-/** The signature was given once at connect: the server charges the order under that session, there is nothing more to sign. */
 export const createOrder = (body: OrderBody) => api<OrderResult>('/api/orders', { method: 'POST', body })

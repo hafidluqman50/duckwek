@@ -9,26 +9,31 @@ let socket: Socket | null = null
 export function getSocket(): Socket {
   if (!socket) {
     socket = io(API_URL, { transports: ['websocket', 'polling'], reconnection: true })
-    socket.on('connect', () => authSocket()) // also after every reconnect
+    socket.on('connect', () => authSocket())
   }
+
   return socket
 }
 
-/** Tells the server who this socket is (the session token), so a CHEER tap can count. Watching a room needs no identity. */
 export function authSocket(): void {
   const token = tokenStore.get()
+
   if (token && socket?.connected) socket.emit('auth', { token })
 }
 
-/** Watch one room. Re-sends room:watch after every reconnect. Returns an unsubscribe. */
-export function watchRoom(code: string, handlers: Record<string, (m: any) => void>): () => void {
-  const s = getSocket()
-  const join = () => s.emit('room:watch', { code })
-  s.on('connect', join)
-  if (s.connected) join()
-  for (const [ev, fn] of Object.entries(handlers)) s.on(ev, fn)
+export function watchRoom(code: string, handlers: Record<string, (message: any) => void>): () => void {
+  const activeSocket = getSocket()
+  const joinRoom = () => activeSocket.emit('room:watch', { code })
+
+  activeSocket.on('connect', joinRoom)
+
+  if (activeSocket.connected) joinRoom()
+
+  for (const [eventName, handler] of Object.entries(handlers)) activeSocket.on(eventName, handler)
+
   return () => {
-    s.off('connect', join)
-    for (const [ev, fn] of Object.entries(handlers)) s.off(ev, fn)
+    activeSocket.off('connect', joinRoom)
+
+    for (const [eventName, handler] of Object.entries(handlers)) activeSocket.off(eventName, handler)
   }
 }

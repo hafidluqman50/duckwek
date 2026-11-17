@@ -13,13 +13,10 @@ export const chain: Chain = defineChain({
 
 export const addresses = env.contracts as Record<keyof typeof env.contracts, Address>
 
-// Reads only: state calls before a write and balances for the profile. The race path itself sends transactions and nothing else.
 export const publicClient: PublicClient = createPublicClient({ chain, transport: http(env.rpcUrl, { batch: false, retryCount: 3, onFetchRequest }) })
 
-// Nonces are allocated by the Relayer (one counter, many concurrent rooms), so the account has no viem nonceManager.
 export const operator: PrivateKeyAccount = privateKeyToAccount(env.operatorKey as `0x${string}`)
 
-// Used only to send signed transactions: no retries (a retry of a timed-out call must not double-send) and a long timeout.
 export const sendClient: PublicClient = createPublicClient({ chain, transport: http(env.rpcUrl, { batch: false, retryCount: 0, timeout: 30_000, onFetchRequest }) })
 
 export const walletClient: WalletClient = createWalletClient({ chain, account: operator, transport: http(env.rpcUrl, { retryCount: 3, onFetchRequest }) })

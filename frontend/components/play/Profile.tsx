@@ -3,19 +3,20 @@
 import { useState } from 'react'
 import { useSession } from '@/contexts/SessionContext'
 import { DuckSvg } from '@/components/duck/DuckSvg'
-import { Btn, Card, Kicker, Title, TrackThumb } from '@/components/ui/kit'
-import { buildTrack } from '@/lib/track'
-import { BILL_COLORS, BODY_COLORS, TEMPLATES, dots, randomName, sgn, statsOf, type Duck, type Part, type Template, type Track } from '@/lib/types'
-import { txUrl } from '@/lib/config'
+import { Button, Card, Kicker, Title, TrackThumb } from '@/components/ui/kit'
+import { buildTrackGeometry } from '@/lib/track'
+import { BILL_COLORS, BODY_COLORS, TEMPLATES, statDots, randomName, signedNumber, calculateDuckStats, type Duck, type Part, type Template, type Track } from '@/lib/types'
+import { explorerTransactionUrl } from '@/lib/config'
 
 type Draft = Pick<Duck, 'name' | 'template' | 'bodyColor' | 'billColor' | 'cosmetics' | 'equippedPartTypeId'>
 
-const fitLine = (p: Part, tracks: Track[]) => tracks.filter((t) => t.status === 'active').map((t) => `${t.name.split(' ')[0]} ${dots(p.fit[t.slug] || 1)}`).join('  ·  ')
-const fx = (p: Part) => `SPD ${sgn(p.speed)}  WGT ${sgn(p.weight)}  BST ${sgn(p.boost)}`
+const fitLine = (part: Part, tracks: Track[]) => tracks.filter((track) => track.status === 'active').map((track) => `${track.name.split(' ')[0]} ${statDots(part.fit[track.slug] || 1)}`).join('  ·  ')
+const partEffects = (part: Part) => `SPD ${signedNumber(part.speed)}  WGT ${signedNumber(part.weight)}  BST ${signedNumber(part.boost)}`
 
-export function Home({ duck, onOpenDuck, onJoinCode, onHost }: { duck: Duck; onOpenDuck: () => void; onJoinCode: (c: string) => void; onHost: () => void }) {
+export function Home({ duck, onOpenDuck, onJoinCode, onHost }: { duck: Duck; onOpenDuck: () => void; onJoinCode: (roomCode: string) => void; onHost: () => void }) {
   const { me } = useSession()
   const [code, setCode] = useState('')
+
   return (
     <div className="anim-enter" style={{ position: 'absolute', inset: 0, padding: '12px 16px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
       <button type="button" className="dw-btn" onClick={onOpenDuck} aria-label="Open My Duck" style={{ display: 'flex', gap: 12, alignItems: 'center', background: '#fff', border: '4px solid #000', borderRadius: 22, boxShadow: '0 5px 0 #000', padding: '10px 12px', textAlign: 'left' }}>
@@ -31,19 +32,19 @@ export function Home({ duck, onOpenDuck, onJoinCode, onHost }: { duck: Duck; onO
         </div>
       </button>
       <div style={{ display: 'flex', gap: 8 }}>
-        {[['USDC', me ? (Number(me.usdc) / 1e6).toFixed(2) : '0.00'], ['PARTS', String(me?.parts.length || 0)], ['TITLES', String(me?.titles.length || 0)]].map(([k, v]) => (
-          <div key={k} style={{ flex: 1, background: '#1E1446', color: '#fff', border: '3px solid #000', borderRadius: 16, padding: '8px 10px' }}>
-            <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 1, color: '#C9B8FF' }}>{k}</div>
-            <div style={{ fontSize: 20, fontWeight: 900 }}>{v}</div>
+        {[['USDC', me ? (Number(me.usdc) / 1e6).toFixed(2) : '0.00'], ['PARTS', String(me?.parts.length || 0)], ['TITLES', String(me?.titles.length || 0)]].map(([label, value]) => (
+          <div key={label} style={{ flex: 1, background: '#1E1446', color: '#fff', border: '3px solid #000', borderRadius: 16, padding: '8px 10px' }}>
+            <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 1, color: '#C9B8FF' }}>{label}</div>
+            <div style={{ fontSize: 20, fontWeight: 900 }}>{value}</div>
           </div>
         ))}
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); if (code.trim()) onJoinCode(code.trim().toUpperCase()) }} style={{ display: 'flex', gap: 8 }}>
+      <form onSubmit={(event) => { event.preventDefault(); if (code.trim()) onJoinCode(code.trim().toUpperCase()) }} style={{ display: 'flex', gap: 8 }}>
         <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, fontSize: 11, fontWeight: 900, letterSpacing: 1 }}>
           ROOM CODE
-          <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="WEK-7Q2" style={{ height: 48, boxSizing: 'border-box', padding: '0 12px', border: '4px solid #000', borderRadius: 14, fontFamily: 'var(--font-mono)', fontSize: 16, fontWeight: 700, color: '#1E1446', background: '#fff' }} />
+          <input value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} placeholder="WEK-7Q2" style={{ height: 48, boxSizing: 'border-box', padding: '0 12px', border: '4px solid #000', borderRadius: 14, fontFamily: 'var(--font-mono)', fontSize: 16, fontWeight: 700, color: '#1E1446', background: '#fff' }} />
         </label>
-        <Btn type="submit" tone="white" h={48} size={16} style={{ alignSelf: 'flex-end', boxShadow: '0 4px 0 #000' }}>Join</Btn>
+        <Button type="submit" tone="white" height={48} fontSize={16} style={{ alignSelf: 'flex-end', boxShadow: '0 4px 0 #000' }}>Join</Button>
       </form>
       {me && me.titles.length > 0 && (
         <Card style={{ padding: '8px 12px' }}>
@@ -52,19 +53,20 @@ export function Home({ duck, onOpenDuck, onJoinCode, onHost }: { duck: Duck; onO
         </Card>
       )}
       <div style={{ flex: 1 }} />
-      <Btn tone="ink" h={54} size={17} shadow={false} onClick={onHost}>Host a room · 1 USDC</Btn>
+      <Button tone="ink" height={54} fontSize={17} shadow={false} onClick={onHost}>Host a room · 1 USDC</Button>
     </div>
   )
 }
 
-export function MyDuck({ draft, onChange, onGarage }: { draft: Draft; onChange: (d: Draft) => void; onGarage: () => void }) {
+export function MyDuck({ draft, onChange, onGarage }: { draft: Draft; onChange: (draft: Draft) => void; onGarage: () => void }) {
   const { me, parts, tracks } = useSession()
   const [tab, setTab] = useState<'parts' | 'body' | 'color' | 'style' | 'name'>('parts')
-  const eqPart = parts.find((p) => p.typeId === draft.equippedPartTypeId) || null
-  const st = statsOf(draft.template, eqPart)
-  const owned = parts.filter((p) => me?.parts.includes(p.typeId))
+  const equippedPart = parts.find((candidate) => candidate.typeId === draft.equippedPartTypeId) || null
+  const stats = calculateDuckStats(draft.template, equippedPart)
+  const owned = parts.filter((candidate) => me?.parts.includes(candidate.typeId))
   const duck = me?.duck
   const tabs: [typeof tab, string][] = [['parts', 'Parts'], ['body', 'Body'], ['color', 'Color'], ['style', 'Style'], ['name', 'Name']]
+
   return (
     <div className="anim-enter" style={{ position: 'absolute', inset: 0, padding: '8px 14px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ position: 'relative', height: 186, flex: 'none', background: '#1E1446', border: '4px solid #000', borderRadius: 24, overflow: 'hidden' }}>
@@ -76,8 +78,8 @@ export function MyDuck({ draft, onChange, onGarage }: { draft: Draft; onChange: 
           <span style={{ padding: '3px 10px', borderRadius: 999, background: '#FFC93C', border: '3px solid #000', color: '#1E1446', fontFamily: 'var(--font-display)', fontSize: 18 }}>{draft.name}</span>
           <span style={{ padding: '2px 8px', borderRadius: 8, fontSize: 10, fontWeight: 900, color: '#1E1446', background: duck?.status === 'hatched' ? '#B8F35A' : '#E6E0FF' }}>{duck?.status === 'hatched' ? 'HATCHED' : 'EGG · hatches after 1st race'}</span>
         </div>
-        <div style={{ position: 'absolute', right: 12, top: 10, fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 800, color: '#C9B8FF', textAlign: 'right', whiteSpace: 'pre-line' }}>{`SPD ${st[0]}\nWGT ${st[1]}\nBST ${st[2]}`}</div>
-        <span style={{ position: 'absolute', left: 12, bottom: 8, padding: '3px 10px', borderRadius: 999, background: '#fff', border: '3px solid #000', color: '#1E1446', fontSize: 12, fontWeight: 900 }}>Equipped · {eqPart ? eqPart.name : 'no part'}</span>
+        <div style={{ position: 'absolute', right: 12, top: 10, fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 800, color: '#C9B8FF', textAlign: 'right', whiteSpace: 'pre-line' }}>{`SPD ${stats[0]}\nWGT ${stats[1]}\nBST ${stats[2]}`}</div>
+        <span style={{ position: 'absolute', left: 12, bottom: 8, padding: '3px 10px', borderRadius: 999, background: '#fff', border: '3px solid #000', color: '#1E1446', fontSize: 12, fontWeight: 900 }}>Equipped · {equippedPart ? equippedPart.name : 'no part'}</span>
       </div>
       <Card style={{ flex: 'none', padding: '7px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
         <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 2, color: '#5B4AB8' }}>COLLECTIBLES</div>
@@ -103,16 +105,16 @@ export function MyDuck({ draft, onChange, onGarage }: { draft: Draft; onChange: 
         {tab === 'parts' && (
           <>
             <div style={{ fontSize: 12, fontWeight: 800 }}>Your part licenses. Equipped = default for every race; swap per track in the lobby.</div>
-            {owned.map((p) => {
-              const on = draft.equippedPartTypeId === p.typeId
+            {owned.map((part) => {
+              const on = draft.equippedPartTypeId === part.typeId
               return (
-                <div key={p.typeId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: on ? '#FFC93C' : '#fff', color: '#1E1446', border: '4px solid #000', borderRadius: 16, boxShadow: `0 ${on ? 5 : 2}px 0 #000` }}>
+                <div key={part.typeId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: on ? '#FFC93C' : '#fff', color: '#1E1446', border: '4px solid #000', borderRadius: 16, boxShadow: `0 ${on ? 5 : 2}px 0 #000` }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ fontFamily: 'var(--font-display)', fontSize: 18 }}>{p.name}</span><span style={{ padding: '1px 6px', border: '2px solid #000', borderRadius: 999, fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>{p.slot}</span></div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 800 }}>{fx(p)}</div>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: '#5B4AB8' }}>{fitLine(p, tracks)}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ fontFamily: 'var(--font-display)', fontSize: 18 }}>{part.name}</span><span style={{ padding: '1px 6px', border: '2px solid #000', borderRadius: 999, fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>{part.slot}</span></div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 800 }}>{partEffects(part)}</div>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: '#5B4AB8' }}>{fitLine(part, tracks)}</div>
                   </div>
-                  <Btn tone={on ? 'white' : 'lime'} h={40} size={13} shadow={false} ariaPressed={on} onClick={() => onChange({ ...draft, equippedPartTypeId: on ? null : p.typeId })} style={{ border: '3px solid #000', padding: '0 12px' }}>{on ? 'Unequip' : 'Equip'}</Btn>
+                  <Button tone={on ? 'white' : 'lime'} height={40} fontSize={13} shadow={false} ariaPressed={on} onClick={() => onChange({ ...draft, equippedPartTypeId: on ? null : part.typeId })} style={{ border: '3px solid #000', padding: '0 12px' }}>{on ? 'Unequip' : 'Equip'}</Button>
                 </div>
               )
             })}
@@ -122,30 +124,32 @@ export function MyDuck({ draft, onChange, onGarage }: { draft: Draft; onChange: 
                 <div style={{ fontSize: 12, fontWeight: 700 }}>Parts change speed, weight and boost. Each one shines on a different track.</div>
               </div>
             )}
-            <Btn tone="ink" h={46} size={15} shadow={false} onClick={onGarage} style={{ border: '3px solid #000' }}>Get parts in the Garage</Btn>
+            <Button tone="ink" height={46} fontSize={15} shadow={false} onClick={onGarage} style={{ border: '3px solid #000' }}>Get parts in the Garage</Button>
           </>
         )}
         {tab === 'body' && (Object.keys(TEMPLATES) as Template[]).map((id) => {
-          const t = TEMPLATES[id], on = draft.template === id
+          const template = TEMPLATES[id]
+          const on = draft.template === id
           return (
             <button key={id} type="button" className="dw-btn" aria-pressed={on} onClick={() => onChange({ ...draft, template: id })} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '10px 12px', border: '4px solid #000', borderRadius: 18, color: '#1E1446', textAlign: 'left', background: on ? '#FFC93C' : '#fff', boxShadow: `0 ${on ? 6 : 3}px 0 #000` }}>
-              <div style={{ flex: 1 }}><div style={{ fontFamily: 'var(--font-display)', fontSize: 22, lineHeight: 1 }}>{t.name}</div><div style={{ fontSize: 12, fontWeight: 700 }}>{t.tag}</div></div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 800 }}>SPD {t.st[0]} WGT {t.st[1]} BST {t.st[2]}</div>
+              <div style={{ flex: 1 }}><div style={{ fontFamily: 'var(--font-display)', fontSize: 22, lineHeight: 1 }}>{template.name}</div><div style={{ fontSize: 12, fontWeight: 700 }}>{template.tag}</div></div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 800 }}>SPD {template.st[0]} WGT {template.st[1]} BST {template.st[2]}</div>
             </button>
           )
         })}
         {tab === 'color' && (
           <>
-            <Swatches title="BODY" list={BODY_COLORS} value={draft.bodyColor} pick={(c) => onChange({ ...draft, bodyColor: c })} />
-            <Swatches title="BILL" list={BILL_COLORS} value={draft.billColor} pick={(c) => onChange({ ...draft, billColor: c })} />
+            <Swatches title="BODY" list={BODY_COLORS} value={draft.bodyColor} pick={(color) => onChange({ ...draft, bodyColor: color })} />
+            <Swatches title="BILL" list={BILL_COLORS} value={draft.billColor} pick={(color) => onChange({ ...draft, billColor: color })} />
           </>
         )}
         {tab === 'style' && (
           <>
-            {([['hat', 'Party hat'], ['shades', 'Shades'], ['scarf', 'Scarf']] as const).map(([k, label]) => {
-              const on = draft.cosmetics[k]
+            {([['hat', 'Party hat'], ['shades', 'Shades'], ['scarf', 'Scarf']] as const).map(([cosmeticKey, label]) => {
+              const on = draft.cosmetics[cosmeticKey]
+
               return (
-                <button key={k} type="button" className="dw-btn" aria-pressed={on} onClick={() => onChange({ ...draft, cosmetics: { ...draft.cosmetics, [k]: !on } })} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: 12, border: '4px solid #000', borderRadius: 18, color: '#1E1446', textAlign: 'left', background: on ? '#FFC93C' : '#fff', boxShadow: `0 ${on ? 6 : 3}px 0 #000` }}>
+                <button key={cosmeticKey} type="button" className="dw-btn" aria-pressed={on} onClick={() => onChange({ ...draft, cosmetics: { ...draft.cosmetics, [cosmeticKey]: !on } })} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: 12, border: '4px solid #000', borderRadius: 18, color: '#1E1446', textAlign: 'left', background: on ? '#FFC93C' : '#fff', boxShadow: `0 ${on ? 6 : 3}px 0 #000` }}>
                   <span style={{ flex: 1, fontSize: 17, fontWeight: 900 }}>{label}</span>
                   <span style={{ fontSize: 12, fontWeight: 800 }}>{on ? 'ON' : 'OFF'}</span>
                 </button>
@@ -158,11 +162,11 @@ export function MyDuck({ draft, onChange, onGarage }: { draft: Draft; onChange: 
           <>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, fontWeight: 900, letterSpacing: 1 }}>
               DUCK NAME · shown on every big screen
-              <input value={draft.name} maxLength={14} onChange={(e) => onChange({ ...draft, name: e.target.value.slice(0, 14) })} style={{ height: 54, boxSizing: 'border-box', padding: '0 14px', border: '4px solid #000', borderRadius: 16, fontSize: 20, fontWeight: 900, color: '#1E1446', background: '#fff' }} />
+              <input value={draft.name} maxLength={14} onChange={(event) => onChange({ ...draft, name: event.target.value.slice(0, 14) })} style={{ height: 54, boxSizing: 'border-box', padding: '0 14px', border: '4px solid #000', borderRadius: 16, fontSize: 20, fontWeight: 900, color: '#1E1446', background: '#fff' }} />
             </label>
-            <Btn tone="white" h={46} size={15} shadow={false} onClick={() => onChange({ ...draft, name: randomName() })} style={{ border: '3px solid #000' }}>Random name</Btn>
-            {[['Races', duck?.races ?? 0], ['Best finish', duck?.bestRank ? `#${duck.bestRank}` : '–'], ['Titles (soulbound)', me?.titles.length ?? 0]].map(([k, v]) => (
-              <div key={String(k)} style={{ background: '#1E1446', color: '#fff', border: '3px solid #000', borderRadius: 14, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 800 }}><span>{k}</span><span>{v}</span></div>
+            <Button tone="white" height={46} fontSize={15} shadow={false} onClick={() => onChange({ ...draft, name: randomName() })} style={{ border: '3px solid #000' }}>Random name</Button>
+            {[['Races', duck?.races ?? 0], ['Best finish', duck?.bestRank ? `#${duck.bestRank}` : '–'], ['Titles (soulbound)', me?.titles.length ?? 0]].map(([label, value]) => (
+              <div key={String(label)} style={{ background: '#1E1446', color: '#fff', border: '3px solid #000', borderRadius: 14, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 800 }}><span>{label}</span><span>{value}</span></div>
             ))}
           </>
         )}
@@ -171,21 +175,22 @@ export function MyDuck({ draft, onChange, onGarage }: { draft: Draft; onChange: 
   )
 }
 
-function Swatches({ title, list, value, pick }: { title: string; list: [string, string][]; value: string; pick: (c: string) => void }) {
+function Swatches({ title, list, value, pick }: { title: string; list: [string, string][]; value: string; pick: (color: string) => void }) {
   return (
     <>
       <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 1 }}>{title}</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: 8 }}>
-        {list.map(([c, label]) => {
-          const on = value.toUpperCase() === c.toUpperCase()
-          return <button key={c} type="button" onClick={() => pick(c)} aria-label={label} aria-pressed={on} style={{ height: 44, borderRadius: 12, background: c, border: on ? '4px solid #000' : '3px solid #000', boxShadow: on ? '0 0 0 3px #fff, 0 0 0 6px #000' : 'none' }} />
+        {list.map(([color, label]) => {
+          const on = value.toUpperCase() === color.toUpperCase()
+
+          return <button key={color} type="button" onClick={() => pick(color)} aria-label={label} aria-pressed={on} style={{ height: 44, borderRadius: 12, background: color, border: on ? '4px solid #000' : '3px solid #000', boxShadow: on ? '0 0 0 3px #fff, 0 0 0 6px #000' : 'none' }} />
         })}
       </div>
     </>
   )
 }
 
-export function Garage({ draft, onEquip, onBuy, busy }: { draft: Draft; onEquip: (typeId: number) => void; onBuy: (p: Part) => void; busy: boolean }) {
+export function Garage({ draft, onEquip, onBuy, busy }: { draft: Draft; onEquip: (typeId: number) => void; onBuy: (part: Part) => void; busy: boolean }) {
   const { me, parts, tracks } = useSession()
   return (
     <div className="anim-enter" style={{ position: 'absolute', inset: 0, padding: '12px 16px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -193,23 +198,24 @@ export function Garage({ draft, onEquip, onBuy, busy }: { draft: Draft; onEquip:
       <Title size={32}>Parts for {draft.name}</Title>
       <div style={{ fontSize: 13, fontWeight: 700 }}>Each part is a license NFT you keep. No part wins on every track. Owned parts live in My Duck.</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflow: 'auto', minHeight: 0 }}>
-        {parts.map((p) => {
-          const own = me?.parts.includes(p.typeId)
-          const on = draft.equippedPartTypeId === p.typeId
+        {parts.map((part) => {
+          const own = me?.parts.includes(part.typeId)
+          const on = draft.equippedPartTypeId === part.typeId
+
           return (
-            <div key={p.typeId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fff', color: '#1E1446', border: '4px solid #000', borderRadius: 18 }}>
+            <div key={part.typeId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fff', color: '#1E1446', border: '4px solid #000', borderRadius: 18 }}>
               <div style={{ width: 64, flex: 'none' }}>
-                <DuckSvg template="balanced" bodyColor={draft.bodyColor} billColor={draft.billColor} partTypeId={p.typeId} width={64} />
+                <DuckSvg template="balanced" bodyColor={draft.bodyColor} billColor={draft.billColor} partTypeId={part.typeId} width={64} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ fontFamily: 'var(--font-display)', fontSize: 19 }}>{p.name}</span><span style={{ padding: '1px 6px', border: '2px solid #000', borderRadius: 999, fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>{p.slot}</span></div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 800 }}>{fx(p)}</div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: '#5B4AB8' }}>{fitLine(p, tracks)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ fontFamily: 'var(--font-display)', fontSize: 19 }}>{part.name}</span><span style={{ padding: '1px 6px', border: '2px solid #000', borderRadius: 999, fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>{part.slot}</span></div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 800 }}>{partEffects(part)}</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#5B4AB8' }}>{fitLine(part, tracks)}</div>
               </div>
               {own ? (
-                <Btn tone={on ? 'yellow' : 'lime'} h={42} size={12} shadow={false} onClick={() => onEquip(p.typeId)} style={{ border: '3px solid #000', padding: '0 10px' }}>{on ? 'EQUIPPED' : 'Equip'}</Btn>
+                <Button tone={on ? 'yellow' : 'lime'} height={42} fontSize={12} shadow={false} onClick={() => onEquip(part.typeId)} style={{ border: '3px solid #000', padding: '0 10px' }}>{on ? 'EQUIPPED' : 'Equip'}</Button>
               ) : (
-                <Btn h={42} size={14} disabled={busy} onClick={() => onBuy(p)} style={{ border: '3px solid #000', boxShadow: '0 4px 0 #000', padding: '0 12px' }}>{(Number(p.price) / 1e6).toFixed(0)} USDC</Btn>
+                <Button height={42} fontSize={14} disabled={busy} onClick={() => onBuy(part)} style={{ border: '3px solid #000', boxShadow: '0 4px 0 #000', padding: '0 12px' }}>{(Number(part.price) / 1e6).toFixed(0)} USDC</Button>
               )}
             </div>
           )
@@ -224,32 +230,34 @@ export function Garage({ draft, onEquip, onBuy, busy }: { draft: Draft; onEquip:
   )
 }
 
-export function CreateRoom({ onCreate, busy }: { onCreate: (f: { name: string; trackId: number; maxDucks: number; fillBots: boolean }) => void; busy: boolean }) {
+export function CreateRoom({ onCreate, busy }: { onCreate: (room: { name: string; trackId: number; maxDucks: number; fillBots: boolean }) => void; busy: boolean }) {
   const { tracks } = useSession()
-  const active = tracks.filter((t) => t.status === 'active' && t.id !== null)
+  const active = tracks.filter((track) => track.status === 'active' && track.id !== null)
   const [name, setName] = useState('GIK UGM Main Stage')
-  const [trackId, setTrackId] = useState<number>(active.find((t) => t.slug === 'merapi-ring')?.id ?? active[0]?.id ?? 2)
+  const [trackId, setTrackId] = useState<number>(active.find((track) => track.slug === 'merapi-ring')?.id ?? active[0]?.id ?? 2)
   const [slots, setSlots] = useState(50)
   const [bots, setBots] = useState(true)
-  const sel = active.find((t) => t.id === trackId)
+  const selectedTrack = active.find((track) => track.id === trackId)
+
   return (
     <div className="anim-enter" style={{ position: 'absolute', inset: 0, padding: '12px 16px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
       <Kicker>HOST A ROOM</Kicker>
       <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 11, fontWeight: 900, letterSpacing: 1 }}>
         ROOM NAME
-        <input value={name} maxLength={40} onChange={(e) => setName(e.target.value)} style={{ height: 46, boxSizing: 'border-box', padding: '0 12px', border: '4px solid #000', borderRadius: 14, fontSize: 16, fontWeight: 800, color: '#1E1446', background: '#fff' }} />
+        <input value={name} maxLength={40} onChange={(event) => setName(event.target.value)} style={{ height: 46, boxSizing: 'border-box', padding: '0 12px', border: '4px solid #000', borderRadius: 14, fontSize: 16, fontWeight: 800, color: '#1E1446', background: '#fff' }} />
       </label>
       <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 1 }}>PICK A TRACK</div>
-      {active.map((t) => {
-        const on = t.id === trackId
-        const geo = buildTrack(t.path, t.closed, t.laps)
+      {active.map((track) => {
+        const on = track.id === trackId
+        const geometry = buildTrackGeometry(track.path, track.closed, track.laps)
+
         return (
-          <button key={t.slug} type="button" className="dw-btn" aria-pressed={on} onClick={() => setTrackId(t.id!)} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', border: '4px solid #000', borderRadius: 18, color: '#1E1446', textAlign: 'left', background: on ? '#FFC93C' : '#fff', boxShadow: `0 ${on ? 5 : 2}px 0 #000` }}>
-            <TrackThumb d={geo.d} />
+          <button key={track.slug} type="button" className="dw-btn" aria-pressed={on} onClick={() => setTrackId(track.id!)} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', border: '4px solid #000', borderRadius: 18, color: '#1E1446', textAlign: 'left', background: on ? '#FFC93C' : '#fff', boxShadow: `0 ${on ? 5 : 2}px 0 #000` }}>
+            <TrackThumb pathData={geometry.d} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, lineHeight: 1 }}>{t.name}</div>
-              <div style={{ fontSize: 11, fontWeight: 800 }}>{(t.lengthM / 1000).toFixed(1)} km · {t.turns} turns · {t.laps} {t.laps > 1 ? 'laps' : 'lap'} · ~{Math.round((t.profile.lapTicks * t.laps * 0.3) / 1)} s</div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#5B4AB8' }}>{t.description.split('.')[0]}</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, lineHeight: 1 }}>{track.name}</div>
+              <div style={{ fontSize: 11, fontWeight: 800 }}>{(track.lengthM / 1000).toFixed(1)} km · {track.turns} turns · {track.laps} {track.laps > 1 ? 'laps' : 'lap'} · ~{Math.round((track.profile.lapTicks * track.laps * 0.3) / 1)} s</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#5B4AB8' }}>{track.description.split('.')[0]}</div>
             </div>
           </button>
         )
@@ -260,8 +268,8 @@ export function CreateRoom({ onCreate, busy }: { onCreate: (f: { name: string; t
         <span style={{ padding: '4px 8px', borderRadius: 8, background: '#1E1446', color: '#fff', fontSize: 10, fontWeight: 900 }}>SOON</span>
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
-        {[20, 50, 100, 200].map((v) => (
-          <button key={v} type="button" className="dw-btn" aria-pressed={slots === v} onClick={() => setSlots(v)} style={{ flex: 1, height: 40, border: '3px solid #000', borderRadius: 12, fontSize: 14, fontWeight: 900, color: '#1E1446', background: slots === v ? '#FFC93C' : '#fff' }}>{v} ducks</button>
+        {[20, 50, 100, 200].map((slotCount) => (
+          <button key={slotCount} type="button" className="dw-btn" aria-pressed={slots === slotCount} onClick={() => setSlots(slotCount)} style={{ flex: 1, height: 40, border: '3px solid #000', borderRadius: 12, fontSize: 14, fontWeight: 900, color: '#1E1446', background: slots === slotCount ? '#FFC93C' : '#fff' }}>{slotCount} ducks</button>
         ))}
       </div>
       <button type="button" className="dw-btn" aria-pressed={bots} onClick={() => setBots(!bots)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#fff', color: '#1E1446', border: '3px solid #000', borderRadius: 14, textAlign: 'left' }}>
@@ -269,14 +277,15 @@ export function CreateRoom({ onCreate, busy }: { onCreate: (f: { name: string; t
         <span style={{ width: 50, height: 28, borderRadius: 999, border: '3px solid #000', background: bots ? '#FFC93C' : '#C9B8FF', position: 'relative' }}><span style={{ position: 'absolute', top: 2, left: bots ? 24 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', border: '2px solid #000', transition: 'left .15s' }} /></span>
       </button>
       <div style={{ flex: 1 }} />
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 900 }}><span>Track rent · {sel?.name}</span><span>{sel ? (Number(sel.rentPrice) / 1e6).toFixed(2) : '1.00'} USDC</span></div>
-      <Btn h={58} disabled={busy || !name.trim() || !sel} onClick={() => onCreate({ name: name.trim(), trackId, maxDucks: slots, fillBots: bots })}>Create room · {sel ? (Number(sel.rentPrice) / 1e6).toFixed(0) : 1} USDC</Btn>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 900 }}><span>Track rent · {selectedTrack?.name}</span><span>{selectedTrack ? (Number(selectedTrack.rentPrice) / 1e6).toFixed(2) : '1.00'} USDC</span></div>
+      <Button height={58} disabled={busy || !name.trim() || !selectedTrack} onClick={() => onCreate({ name: name.trim(), trackId, maxDucks: slots, fillBots: bots })}>Create room · {selectedTrack ? (Number(selectedTrack.rentPrice) / 1e6).toFixed(0) : 1} USDC</Button>
     </div>
   )
 }
 
 export function Hosted({ code, name, summary, onLobby }: { code: string; name: string; summary: string; onLobby: () => void }) {
   const stage = typeof window !== 'undefined' ? `${window.location.origin}/stage/${code}` : `/stage/${code}`
+
   return (
     <div className="anim-enter" style={{ position: 'absolute', inset: 0, padding: '14px 20px 22px', display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', textAlign: 'center' }}>
       <span style={{ padding: '6px 12px', borderRadius: 999, background: '#1E1446', color: '#fff', fontSize: 12, fontWeight: 900, letterSpacing: 2 }}>ROOM CREATED · YOU HOST</span>
@@ -291,7 +300,7 @@ export function Hosted({ code, name, summary, onLobby }: { code: string; name: s
         <a href={stage} target="_blank" rel="noreferrer" style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: '#FFC93C', wordBreak: 'break-all' }}>{stage}</a>
       </Card>
       <div style={{ flex: 1 }} />
-      <Btn h={60} onClick={onLobby} style={{ width: '100%' }}>Go to lobby · race too</Btn>
+      <Button height={60} onClick={onLobby} style={{ width: '100%' }}>Go to lobby · race too</Button>
     </div>
   )
 }

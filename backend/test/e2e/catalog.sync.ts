@@ -1,7 +1,3 @@
-/**
- * One-off: reads the catalog from the chain into the database the env points at (what the server does at boot), and prints it.
- *   DOTENV_CONFIG_PATH=.env.staging npx ts-node -T -r tsconfig-paths/register test/e2e/catalog.sync.ts
- */
 import 'dotenv/config'
 import { sequelize } from '../../config/database'
 import '../../app/Models/index'
@@ -12,7 +8,17 @@ import { Track } from '../../app/Models/Track'
 ;(async () => {
   console.log('db user:', process.env.PGUSER)
   console.log(await syncCatalog())
-  for (const p of await PartType.findAll({ order: [['type_id', 'ASC']] })) console.log('part', p.type_id, p.name, p.slot, JSON.stringify(p.stats), '#' + p.color.toString(16).padStart(6, '0'), p.status, p.price)
-  for (const t of await Track.findAll({ order: [['id', 'ASC']] })) console.log('track', t.token_id, t.slug, t.name, `${t.turns} turns ${t.length_m} m ${t.laps} laps`, 'closed', t.closed, 'v' + t.layout_version, 'path', t.path.length, JSON.stringify(t.profile), 'holder', t.holder?.slice(0, 8), t.status)
+
+  for (const part of await PartType.findAll({ order: [['type_id', 'ASC']] })) {
+    console.log('part', part.type_id, part.name, part.slot, JSON.stringify(part.stats), '#' + part.color.toString(16).padStart(6, '0'), part.status, part.price)
+  }
+
+  for (const track of await Track.findAll({ order: [['id', 'ASC']] })) {
+    console.log('track', track.token_id, track.slug, track.name, `${track.turns} turns ${track.length_m} m ${track.laps} laps`, 'closed', track.closed, 'v' + track.layout_version, 'path', track.path.length, JSON.stringify(track.profile), 'holder', track.holder?.slice(0, 8), track.status)
+  }
+
   await sequelize.close()
-})().catch((e) => { console.error(e); process.exit(1) })
+})().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

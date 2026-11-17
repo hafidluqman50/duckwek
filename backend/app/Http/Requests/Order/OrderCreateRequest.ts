@@ -22,13 +22,15 @@ export class OrderCreateRequest {
       partTypeId: Joi.when('kind', { is: 'buy_part', then: Joi.number().integer().min(0).required(), otherwise: Joi.any().strip() }),
     })
     const { error } = validationScheme.validate(this.request, { abortEarly: false })
+
     if (error) {
-      throw new BadRequestException('Error Validation', { validations: error.details.map((x) => x.message) })
+      throw new BadRequestException('Error Validation', { validations: error.details.map((detail) => detail.message) })
     }
   }
 
   public toDTO(): OrderCreateDTO {
     this.validator()
+
     return new OrderCreateDTO(this.request as any)
   }
 }

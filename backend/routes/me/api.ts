@@ -5,7 +5,7 @@ import { IAuthRequest } from '@Interfaces/IAuthRequest'
 
 const meRoute: Express = express()
 
-meRoute.get('/', [authCheck.handle], (req: IAuthRequest, res: Response): Promise<void> => profileController.me(req, res))
-meRoute.put('/duck', [authCheck.handle], (req: IAuthRequest, res: Response): Promise<void> => profileController.updateDuck(req, res))
+meRoute.get('/', [authCheck.handle], (request: IAuthRequest, response: Response): Promise<void> => profileController.me(request, response))
+meRoute.put('/duck', [authCheck.handle], (request: IAuthRequest, response: Response): Promise<void> => profileController.updateDuck(request, response))
 
 export default meRoute

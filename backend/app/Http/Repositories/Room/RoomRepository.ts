@@ -11,8 +11,8 @@ export class RoomRepository {
     return (await Room.count({ where: { code } })) > 0
   }
 
-  public async create(data: { code: string; room_key: string; name: string; host: string; track_id: number; max_ducks: number; fill_bots: boolean; status: Room['status']; chain_room_id?: string | null; create_tx?: string | null }): Promise<Room> {
-    return Room.create(data as any)
+  public async create(attributes: { code: string; room_key: string; name: string; host: string; track_id: number; max_ducks: number; fill_bots: boolean; status: Room['status']; chain_room_id?: string | null; create_tx?: string | null }): Promise<Room> {
+    return Room.create(attributes as any)
   }
 
   public async players(roomId: number): Promise<RoomPlayer[]> {
@@ -23,10 +23,12 @@ export class RoomRepository {
     return RoomPlayer.findOne({ where: { room_id: roomId, address } })
   }
 
-  public async addPlayer(data: Partial<RoomPlayer> & { room_id: number; address: string; duck_name: string }): Promise<RoomPlayer> {
-    const existing = await this.player(data.room_id, data.address)
-    if (existing) return existing.update(data)
-    return RoomPlayer.create(data as any)
+  public async addPlayer(attributes: Partial<RoomPlayer> & { room_id: number; address: string; duck_name: string }): Promise<RoomPlayer> {
+    const existing = await this.player(attributes.room_id, attributes.address)
+
+    if (existing) return existing.update(attributes)
+
+    return RoomPlayer.create(attributes as any)
   }
 
   public async countPlayers(roomId: number): Promise<number> {

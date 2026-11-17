@@ -8,11 +8,6 @@ import {Badge} from "../src/Badge.sol";
 import {DuckWekVault} from "../src/DuckWekVault.sol";
 import {DuckWekRace} from "../src/DuckWekRace.sol";
 
-/// Read-only post-deploy check (plan 0013 DoD 7). Reads every role, minter, operator, renderer, catalog entry and price
-/// from the chain and reverts on the first mismatch with the expected configuration. It sends no transaction.
-///
-/// forge script script/CheckDeploy.s.sol --rpc-url $RPC_URL
-/// Env: VAULT, RACE, PART_NFT, TRACK_NFT, BADGE, USDC, OPERATOR, TREASURY, EXPECTED_OWNER (the deployer on testnet, the Safe on mainnet).
 contract CheckDeployScript is Script {
     bytes constant KALI = hex"0f4c3d4c3d4c3d";
     bytes constant MERAPI = hex"0a45092a2b0d4c2c2c";
@@ -27,7 +22,6 @@ contract CheckDeployScript is Script {
         address treasury = vm.envAddress("TREASURY");
         address expectedOwner = vm.envAddress("EXPECTED_OWNER");
 
-        // wiring
         require(address(vault.tracks()) == address(tracks), "vault.tracks");
         require(address(vault.parts()) == address(parts), "vault.parts");
         require(address(vault.usdc()) == vm.envAddress("USDC"), "vault.usdc");
@@ -36,28 +30,24 @@ contract CheckDeployScript is Script {
         require(address(badge.tracks()) == address(tracks), "badge.tracks");
         require(vault.treasury() == treasury, "treasury");
 
-        // owners (Ownable2Step: a pending transfer must have been accepted)
         require(vault.owner() == expectedOwner, "vault owner");
         require(race.owner() == expectedOwner, "race owner");
         require(parts.owner() == expectedOwner, "parts owner");
         require(tracks.owner() == expectedOwner, "tracks owner");
         require(badge.owner() == expectedOwner, "badge owner");
 
-        // operators
         require(vault.isOperator(operator), "vault operator");
         require(vault.isOperator(address(race)), "race is a vault operator");
         require(race.isOperator(operator), "race operator");
         require(tracks.isOperator(operator), "tracks operator");
         require(parts.isOperator(operator), "parts operator");
 
-        // set-once minters and renderers
         require(parts.minter() == address(vault), "parts minter");
         require(badge.minter() == address(race), "badge minter");
         require(address(parts.renderer()) != address(0), "parts renderer");
         require(address(tracks.renderer()) != address(0), "tracks renderer");
         require(address(badge.renderer()) != address(0), "badge renderer");
 
-        // prices and limits
         require(vault.joinPrice() == 100_000, "join price");
         require(vault.MAX_EQUIPPED() == 1, "max equipped");
         require(!vault.paused() && !race.paused(), "paused");
@@ -65,7 +55,6 @@ contract CheckDeployScript is Script {
         _tracks(tracks, treasury);
         _parts(parts, treasury);
 
-        // art must answer for every catalog entry
         require(bytes(tracks.tokenURI(1)).length > 0 && bytes(tracks.tokenURI(2)).length > 0, "track art");
         console.log("CheckDeploy: OK");
     }
@@ -76,14 +65,24 @@ contract CheckDeployScript is Script {
         _track(tracks, 2, "Merapi Ring", MERAPI, 2, treasury);
     }
 
-    function _track(TrackNFT tracks, uint256 id, string memory name, bytes memory seg, uint16 laps, address treasury) internal view {
-        TrackNFT.Track memory t = tracks.track(id);
-        require(keccak256(bytes(t.name)) == keccak256(bytes(name)), "track name");
-        require(t.platform && t.active && t.version == 1 && t.editsUsed == 0, "track flags");
-        require(tracks.ownerOf(id) == treasury, "track holder");
-        require(tracks.rentOf(id) == 1_000_000, "track rent");
-        (bytes memory s, uint16 l) = tracks.layoutOf(id, 1);
-        require(keccak256(s) == keccak256(seg) && l == laps, "track layout");
+    function _track(
+        TrackNFT tracks,
+        uint256 trackId,
+        string memory name,
+        bytes memory segments,
+        uint16 laps,
+        address treasury
+    ) internal view {
+        TrackNFT.Track memory storedTrack = tracks.track(trackId);
+        require(keccak256(bytes(storedTrack.name)) == keccak256(bytes(name)), "track name");
+        require(
+            storedTrack.platform && storedTrack.active && storedTrack.version == 1 && storedTrack.editsUsed == 0,
+            "track flags"
+        );
+        require(tracks.ownerOf(trackId) == treasury, "track holder");
+        require(tracks.rentOf(trackId) == 1_000_000, "track rent");
+        (bytes memory storedSegments, uint16 storedLaps) = tracks.layoutOf(trackId, 1);
+        require(keccak256(storedSegments) == keccak256(segments) && storedLaps == laps, "track layout");
     }
 
     function _parts(PartNFT parts, address treasury) internal view {
@@ -94,14 +93,25 @@ contract CheckDeployScript is Script {
         _part(parts, 2, "Iron Bill", 2, 0x9AA3B8, -1, 1, 2, treasury);
     }
 
-    function _part(PartNFT parts, uint256 id, string memory name, uint8 slot, uint24 color, int8 s, int8 w, int8 b, address treasury)
-        internal
-        view
-    {
-        PartNFT.PartType memory p = parts.partType(id);
-        require(keccak256(bytes(p.name)) == keccak256(bytes(name)), "part name");
-        require(p.slot == slot && p.color == color && p.price == 1_000_000, "part fields");
-        require(p.creator == treasury && p.platform && p.active, "part owner");
-        require(parts.statOf(id, "speed") == s && parts.statOf(id, "weight") == w && parts.statOf(id, "boost") == b, "part stats");
+    function _part(
+        PartNFT parts,
+        uint256 typeId,
+        string memory name,
+        uint8 slot,
+        uint24 color,
+        int8 speed,
+        int8 weight,
+        int8 boost,
+        address treasury
+    ) internal view {
+        PartNFT.PartType memory part = parts.partType(typeId);
+        require(keccak256(bytes(part.name)) == keccak256(bytes(name)), "part name");
+        require(part.slot == slot && part.color == color && part.price == 1_000_000, "part fields");
+        require(part.creator == treasury && part.platform && part.active, "part owner");
+        require(
+            parts.statOf(typeId, "speed") == speed && parts.statOf(typeId, "weight") == weight
+                && parts.statOf(typeId, "boost") == boost,
+            "part stats"
+        );
     }
 }

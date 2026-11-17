@@ -172,14 +172,14 @@
         "internalType": "uint256"
       },
       {
-        "name": "creatorSig",
+        "name": "creatorSignature",
         "type": "bytes",
         "internalType": "bytes"
       }
     ],
     "outputs": [
       {
-        "name": "id",
+        "name": "trackId",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -213,7 +213,7 @@
     ],
     "outputs": [
       {
-        "name": "id",
+        "name": "trackId",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -343,12 +343,12 @@
     "name": "layoutOf",
     "inputs": [
       {
-        "name": "id",
+        "name": "trackId",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "v",
+        "name": "version",
         "type": "uint32",
         "internalType": "uint32"
       }
@@ -392,7 +392,7 @@
     "name": "nameOf",
     "inputs": [
       {
-        "name": "id",
+        "name": "trackId",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -489,7 +489,7 @@
     "name": "publishLayout",
     "inputs": [
       {
-        "name": "id",
+        "name": "trackId",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -509,7 +509,7 @@
         "internalType": "uint256"
       },
       {
-        "name": "holderSig",
+        "name": "holderSignature",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -522,7 +522,7 @@
     "name": "publishPlatformLayout",
     "inputs": [
       {
-        "name": "id",
+        "name": "trackId",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -578,7 +578,7 @@
     "name": "rentOf",
     "inputs": [
       {
-        "name": "id",
+        "name": "trackId",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -648,7 +648,7 @@
     "name": "setActive",
     "inputs": [
       {
-        "name": "id",
+        "name": "trackId",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -702,7 +702,7 @@
     "name": "setRenderer",
     "inputs": [
       {
-        "name": "r",
+        "name": "renderer_",
         "type": "address",
         "internalType": "address"
       }
@@ -715,7 +715,7 @@
     "name": "setRent",
     "inputs": [
       {
-        "name": "id",
+        "name": "trackId",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -765,7 +765,7 @@
     "name": "tokenURI",
     "inputs": [
       {
-        "name": "id",
+        "name": "tokenId",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -784,7 +784,7 @@
     "name": "track",
     "inputs": [
       {
-        "name": "id",
+        "name": "trackId",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -907,7 +907,7 @@
     "name": "versionOf",
     "inputs": [
       {
-        "name": "id",
+        "name": "trackId",
         "type": "uint256",
         "internalType": "uint256"
       }

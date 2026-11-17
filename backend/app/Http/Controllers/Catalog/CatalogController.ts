@@ -7,19 +7,19 @@ export class CatalogController extends BaseController {
     super()
   }
 
-  public async tracks(_req: Request, res: Response): Promise<void> {
+  public async tracks(_request: Request, response: Response): Promise<void> {
     try {
-      this.ok(res, 'Success Get Tracks!', await this.catalogService.tracks())
-    } catch (e) {
-      this.fail(res, e)
+      this.ok(response, 'Success Get Tracks!', await this.catalogService.tracks())
+    } catch (error) {
+      this.fail(response, error)
     }
   }
 
-  public async parts(_req: Request, res: Response): Promise<void> {
+  public async parts(_request: Request, response: Response): Promise<void> {
     try {
-      this.ok(res, 'Success Get Parts!', await this.catalogService.parts())
-    } catch (e) {
-      this.fail(res, e)
+      this.ok(response, 'Success Get Parts!', await this.catalogService.parts())
+    } catch (error) {
+      this.fail(response, error)
     }
   }
 }

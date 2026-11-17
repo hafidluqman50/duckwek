@@ -31,11 +31,12 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(cookieParser())
 
-app.get('/', (_req: Request, res: Response): void => {
-  res.status(200).json({ message: 'DuckWek API · live duck racing on Monad' })
+app.get('/', (_request: Request, response: Response): void => {
+  response.status(200).json({ message: 'DuckWek API · live duck racing on Monad' })
 })
-app.get('/api/health', (_req: Request, res: Response): void => {
-  res.status(200).json({ status: true, data: { chain: env.chainId, sockets: io.engine.clientsCount, rpc: rpcStats() } })
+
+app.get('/api/health', (_request: Request, response: Response): void => {
+  response.status(200).json({ status: true, data: { chain: env.chainId, sockets: io.engine.clientsCount, rpc: rpcStats() } })
 })
 
 app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerDocuments))
@@ -67,12 +68,13 @@ console.log(`
 
 const boot = async () => {
   await connectDatabase()
-  await startCatalogSync() // the catalog (parts, circuits, stats, layouts) is read from the chain, not seeded
+  await startCatalogSync()
+
   server.listen(env.port, () => console.log(`[server]: Server is running at http://localhost:${env.port}`))
 }
 
-boot().catch((e) => {
-  console.error(e)
+boot().catch((error) => {
+  console.error(error)
   process.exit(1)
 })
 

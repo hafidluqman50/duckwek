@@ -1,7 +1,6 @@
 import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize'
 import { sequelize } from '@config/database'
 
-/** Mirror of a soulbound Badge awarded on-chain by Settlement (podium only, never bought). */
 class Title extends Model<InferAttributes<Title>, InferCreationAttributes<Title>> {
   declare id: CreationOptional<number>
   declare address: string

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 1.13 |
+| **Version** | 1.14 |
 | **Status** | Draft — awaiting owner approval. The "Approved" status written in v1.2 was set by the agent, not by the owner, and is withdrawn. |
 | **Date Created** | 2026-11-16 |
 | **Last Updated** | 2026-11-17 |
@@ -23,6 +23,7 @@
 | 1.11 | 2026-11-17 | §12.6: audit extended to every source file including `MockUSDC`, ERC-721 conformance, real invariant tests for the Vault, and a mutation check of those tests. |
 | 1.12 | 2026-11-17 | §12.7: testnet redeployed from the cleaned and audited code (no comments except parameter docblocks, full-word names, ABI parameter names spelled out, Slither fixes included); roles checked on chain before and after; Fly and Vercel staging updated. The §12.3 table is superseded by the §12.7 addresses. |
 | 1.13 | 2026-11-17 | §12.8: testnet redeployed with the owner wallet `0x5617` as the deployer and owner (no pending ownership); the §12.7 deploy by the relayer key is superseded. The smart-contract env had a duplicate `RPC_URL` (public RPC) that was removed. |
+| 1.14 | 2026-11-17 | §13.1: Deployer row set to the owner wallet `0x5617` (the owner stated the deployer must be `0x5617`). §13.4: mainnet redeploy agenda with its blockers (Alchemy mainnet not enabled for the app, contract decisions, USDC check). `smart-contract/.env` now separates `TESTNET_*` and `MAINNET_*` addresses. |
 
 > **Handoff to Claude Code.** Read `AGENTS.md` first. This plan is a **Draft**. Do not write code until the owner sets Status to Approved. When approved, implement in the order of §10. Every item marked `UNVERIFIED` must be resolved by the test or source named next to it before the code depends on it. Ask the owner about anything in §11 instead of deciding it.
 
@@ -412,7 +413,7 @@ Prod is untouched: `backend/fly.toml` still describes `duckwek-api` (always on, 
 | **Owner** | contract admin | pause, add or remove operators, set or lock renderers, create platform parts and circuits, moderation, add stat keys, set the join price inside its bounds | change a creator's price, a part's price, stats or name, take any balance, mint titles | `0x5617007a51331f4e7241DE852cDc4Bbbe723CAE4` (owner of the five v1 mainnet contracts; confirmed by the owner 2026-11-17) |
 | **Treasury** | the protocol's income address (the `creator` of every platform part and circuit) | withdraw its own earnings from the Vault | be a key the owner does not hold | `0xD3ABe6Cb5EAe7B9f57C543151F825AD9149Af2D9` (treasury of the v1 mainnet Vault; confirmed by the owner 2026-11-17) |
 | **Relayer (operator)** | hot key that pays gas | submit orders, ticks, start, finalize, publish reviewed layouts | move funds, set prices, charge outside a live session | `0x5C0929120E9ecfFc5E684Da1d0f5101e7d2d4B49` (operator of the v1 mainnet Vault, on chain) |
-| **Deployer** | temporary key that deploys and configures | deploy, set the once-only minters, create the catalog, then offer ownership to the Owner | keep any power after the Owner accepts | **OPEN** |
+| **Deployer** | the owner wallet signs the deployment (the relayer never deploys) | deploy, set the once-only minters, create the catalog | be any wallet other than the Owner | `0x5617007a51331f4e7241DE852cDc4Bbbe723CAE4` (stated by the owner 2026-11-17) |
 
 The owner, the treasury and the relayer are three different addresses on mainnet. On staging they are three different addresses as well (the staging deploy has to be redone to follow this).
 
@@ -439,6 +440,21 @@ If something is wrong before step 7, v1 keeps running and the v2 contracts are r
 | M5 | The nine contract decisions: layout format, `color` trait, adopting a consumed permit as the session, no upper bound on creator rent, `MAX_EQUIPPED` fixed at 1, no timelock, join price bounds 0.01 to 1 USDC, `Ownable2Step` on the Badge, stat budget without a lower bound. Which ones change. |
 | M6 | The real USDC address on Monad mainnet, checked against the Monad address list, and whether it supports EIP-2612 `permit` (the one-signature flow depends on it, plan 0002 DoD 6). UNVERIFIED until checked on chain. |
 | M7 | Staging: redo the testnet deploy with the roles apart and which addresses to use. |
+
+### 13.4 Mainnet redeploy agenda (added v1.14)
+
+The testnet contracts of §12.8 are the rehearsal. Mainnet needs its own deploy from the final code. Nothing in this list runs until the owner says go for that step.
+
+| # | Item | State |
+|---|---|---|
+| A1 | Contract decisions of M5, plus keeping or removing `sessionCap` and `sessionSpent` (§12.6 mutation finding). Any change to a contract means a testnet redeploy first, then the mainnet deploy from that same commit. | waiting for the owner |
+| A2 | RPC for chain 143: the Alchemy app answers `MONAD_MAINNET is not enabled for this app` (HTTP 403) on the mainnet URL. The owner has to enable Monad Mainnet for the app in the Alchemy dashboard. No public RPC is used. | blocked on the owner |
+| A3 | M6: read `symbol`, `decimals`, `name` and the permit domain of the canonical USDC on chain 143 through the Alchemy mainnet URL. `MAINNET_USDC` in `smart-contract/.env` comes from `README.md` and is not verified yet. | blocked on A2 |
+| A4 | Deployer is the owner wallet `0x5617`; `FINAL_OWNER` stays empty; `USDC` is the real address; `WELCOME_ENABLED=false`. The script prints and checks the signer, the RPC host and the chain id before it sends anything. | ready after A1 to A3 |
+| A5 | `CheckDeploy` with `EXPECTED_OWNER`, then the nine verifications with `chainId` 143, then the smoke test with real USDC (§13.2 step 6). | after A4 |
+| A6 | Production database backup, migration `20261117000001`, production Fly and Vercel secrets with the new addresses and chain 143, deploy from `main` after the pull request. | after A5 |
+
+The addresses of the finished mainnet deploy go into `MAINNET_*` in `smart-contract/.env` and into the production secrets. The `TESTNET_*` block is never reused for mainnet.
 
 ### 12.5 Slither audit (2026-11-17)
 

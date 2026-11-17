@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 1.11 |
+| **Version** | 1.12 |
 | **Status** | Draft — awaiting owner approval. The "Approved" status written in v1.2 was set by the agent, not by the owner, and is withdrawn. |
 | **Date Created** | 2026-11-16 |
 | **Last Updated** | 2026-11-17 |
@@ -21,6 +21,7 @@
 | 1.9 | 2026-11-17 | Testnet redeployed with the roles apart, using the same three wallets as the v1 mainnet contracts (owner, treasury, relayer). §12.3 addresses replaced. §13.1 roles filled from the v1 mainnet contracts and confirmed by the owner. Ownership of the five testnet contracts is offered to the owner wallet and waits for the owner to accept. |
 | 1.10 | 2026-11-17 | §12.5: Slither audit of the production contracts (53 findings, 0 after the fixes and the reasoned annotations). The testnet contracts deployed before the fixes do not contain them. |
 | 1.11 | 2026-11-17 | §12.6: audit extended to every source file including `MockUSDC`, ERC-721 conformance, real invariant tests for the Vault, and a mutation check of those tests. |
+| 1.12 | 2026-11-17 | §12.7: testnet redeployed from the cleaned and audited code (no comments except parameter docblocks, full-word names, ABI parameter names spelled out, Slither fixes included); roles checked on chain before and after; Fly and Vercel staging updated. The §12.3 table is superseded by the §12.7 addresses. |
 
 > **Handoff to Claude Code.** Read `AGENTS.md` first. This plan is a **Draft**. Do not write code until the owner sets Status to Approved. When approved, implement in the order of §10. Every item marked `UNVERIFIED` must be resolved by the test or source named next to it before the code depends on it. Ask the owner about anything in §11 instead of deciding it.
 
@@ -470,3 +471,38 @@ If something is wrong before step 7, v1 keeps running and the v2 contracts are r
 **Finding from the mutation check.** The cap in `Vault._checkSession` is redundant today: the permit sets the token allowance to the same value as `sessionCap`, so the token already refuses a charge past it. The value of the session in the Vault is the **end time** (an allowance has none). `sessionCap` and `sessionSpent` could be removed to save gas and code; kept for now because removing them is a contract change that needs the owner's decision.
 
 Still not done: a review by another person, a formal verification, an external audit. `0` findings from tools and 109 own tests do not replace them.
+
+### 12.7 Testnet redeploy from the cleaned code (2026-11-17, chain 10143)
+
+Source: commit `b9e97e8` plus the Slither fixes of §12.5 and §12.6. 109 Foundry tests pass, Slither reports 0 findings, selectors and EIP-712 typehashes are identical to the previous build (only parameter names changed).
+
+| Role | Wallet | Check |
+|---|---|---|
+| Deployer (temporary owner) | `0x5C09…4B49` (relayer key) | key derives this address; the same key is the backend operator |
+| Owner (pending) | `0x5617…CAE4` | `pendingOwner()` of Vault, Race, TrackNFT, PartNFT and Badge returns this address; it must call `acceptOwnership` |
+| Treasury | `0xD3AB…F2D9` | `vault.treasury()` returns this address |
+| Operator | `0x5C09…4B49` | `CheckDeploy` printed `OK` |
+
+Owner and treasury were also read from the v1 mainnet Vault and Race and match. The three roles are distinct addresses.
+
+| Contract | Address |
+|---|---|
+| MockUSDC | `0x91C3f5D846B428170a7f6A0EAF0635107c88a494` |
+| TrackNFT | `0x38849b58B69a2975A2Ffb3cE1F84120D6E7546B8` |
+| PartNFT | `0xa731c5E7F2bc0ab401EF01e9E909eE7d08f84d3c` |
+| Badge | `0x4Ae41Da270fcF763Dc10d4369E7a3e0eF7B51aB1` |
+| DuckWekVault | `0x99d5Bb0cb2AD58939ceB0A886195E0dD5be5eD8c` |
+| DuckWekRace | `0xF43465Ccde6aa5736561BEA507e09B0BCF3Ba543` |
+| PartRenderer | `0x7cBC5173dd0A8D72B2D30441d739c5249A65c973` |
+| TrackRenderer | `0xE2Aa8732c107eD62b0f7C3Ca0421B29b22968B15` |
+| BadgeRenderer | `0xd809970E70B2428965A57902Bd51fa45b723dF38` |
+
+| Item | Result |
+|---|---|
+| Deploy | 32 transactions, gas estimate multiplier 150 (about 6.5 MON charged on the limit) |
+| Verification | All nine contracts verified through the Monad verification API: MonadVision "perfect match" and Monadscan success |
+| Fly staging | secrets for the six addresses and `CHAIN_ID` set, deployed to `duckwek-stage-api`; boot synced the catalog from the new contracts (3 parts, 2 tracks); machine stopped afterwards |
+| Vercel staging | the six `NEXT_PUBLIC_*_ADDRESS` variables replaced in project `duckwek-stage`; production deployment Ready |
+| E2E on the real deployment | PASS: 31 ticks, replay from the on-chain seed identical 31 of 31, total 0.38 MON |
+| Art | `tokenURI` of parts 1 and 2 and tracks 1 and 2 read from chain: closed SVG with drawn shapes and an `animation_url` |
+| Still open | owner `acceptOwnership` on the five contracts, then `CheckDeploy` with `EXPECTED_OWNER` set to the owner; Vercel production branch of `duckwek-stage` set to `stage` in the dashboard |

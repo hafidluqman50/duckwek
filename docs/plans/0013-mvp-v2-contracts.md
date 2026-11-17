@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 1.14 |
+| **Version** | 1.15 |
 | **Status** | Draft — awaiting owner approval. The "Approved" status written in v1.2 was set by the agent, not by the owner, and is withdrawn. |
 | **Date Created** | 2026-11-16 |
 | **Last Updated** | 2026-11-17 |
@@ -24,6 +24,7 @@
 | 1.12 | 2026-11-17 | §12.7: testnet redeployed from the cleaned and audited code (no comments except parameter docblocks, full-word names, ABI parameter names spelled out, Slither fixes included); roles checked on chain before and after; Fly and Vercel staging updated. The §12.3 table is superseded by the §12.7 addresses. |
 | 1.13 | 2026-11-17 | §12.8: testnet redeployed with the owner wallet `0x5617` as the deployer and owner (no pending ownership); the §12.7 deploy by the relayer key is superseded. The smart-contract env had a duplicate `RPC_URL` (public RPC) that was removed. |
 | 1.14 | 2026-11-17 | §13.1: Deployer row set to the owner wallet `0x5617` (the owner stated the deployer must be `0x5617`). §13.4: mainnet redeploy agenda with its blockers (Alchemy mainnet not enabled for the app, contract decisions, USDC check). `smart-contract/.env` now separates `TESTNET_*` and `MAINNET_*` addresses. |
+| 1.15 | 2026-11-17 | §13.4 A2 and A3 resolved: the owner supplied a working Alchemy mainnet URL (chain id 143 read through it) and the canonical USDC was verified on chain (name `USDC`, version `2`, 6 decimals, `DOMAIN_SEPARATOR` equals the one computed for name USDC, version 2, chain 143). |
 
 > **Handoff to Claude Code.** Read `AGENTS.md` first. This plan is a **Draft**. Do not write code until the owner sets Status to Approved. When approved, implement in the order of §10. Every item marked `UNVERIFIED` must be resolved by the test or source named next to it before the code depends on it. Ask the owner about anything in §11 instead of deciding it.
 
@@ -448,9 +449,9 @@ The testnet contracts of §12.8 are the rehearsal. Mainnet needs its own deploy 
 | # | Item | State |
 |---|---|---|
 | A1 | Contract decisions of M5, plus keeping or removing `sessionCap` and `sessionSpent` (§12.6 mutation finding). Any change to a contract means a testnet redeploy first, then the mainnet deploy from that same commit. | waiting for the owner |
-| A2 | RPC for chain 143: the Alchemy app answers `MONAD_MAINNET is not enabled for this app` (HTTP 403) on the mainnet URL. The owner has to enable Monad Mainnet for the app in the Alchemy dashboard. No public RPC is used. | blocked on the owner |
-| A3 | M6: read `symbol`, `decimals`, `name` and the permit domain of the canonical USDC on chain 143 through the Alchemy mainnet URL. `MAINNET_USDC` in `smart-contract/.env` comes from `README.md` and is not verified yet. | blocked on A2 |
-| A4 | Deployer is the owner wallet `0x5617`; `FINAL_OWNER` stays empty; `USDC` is the real address; `WELCOME_ENABLED=false`. The script prints and checks the signer, the RPC host and the chain id before it sends anything. | ready after A1 to A3 |
+| A2 | RPC for chain 143: the first Alchemy URL answered HTTP 403 (`MONAD_MAINNET is not enabled for this app`); the owner supplied a working mainnet URL, now in `RPC_MAINNET_URL`. No public RPC is used. | done |
+| A3 | M6: `symbol` USDC, `name` USDC, `version` 2, `decimals` 6 read on chain 143 through Alchemy; `DOMAIN_SEPARATOR` equals the value computed for (USDC, 2, 143), so EIP-2612 permit works with these domain values. | done |
+| A4 | Deployer is the owner wallet `0x5617`; `FINAL_OWNER` stays empty; `USDC` is the real address; `WELCOME_ENABLED=false`. The script prints and checks the signer, the RPC host and the chain id before it sends anything. | ready after A1 |
 | A5 | `CheckDeploy` with `EXPECTED_OWNER`, then the nine verifications with `chainId` 143, then the smoke test with real USDC (§13.2 step 6). | after A4 |
 | A6 | Production database backup, migration `20261117000001`, production Fly and Vercel secrets with the new addresses and chain 143, deploy from `main` after the pull request. | after A5 |
 

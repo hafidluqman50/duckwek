@@ -9,6 +9,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 ///         Circle's USDC, so the ONE signature a player gives at connect is a permit for the Vault and mainnet is only
 ///         an address change. The one mock-only addition is the welcome mint: the Vault mints `WELCOME_AMOUNT` once per
 ///         wallet inside that wallet's first paid order, so a new player never needs a faucet or an extra transaction.
+// slither-disable-start missing-inheritance -- test token only: it has no reason to import the Vault just for its welcome interface
 contract MockUSDC is ERC20, ERC20Permit, Ownable {
     uint256 public constant WELCOME_AMOUNT = 5_000_000; // 5 USDC
 
@@ -31,6 +32,7 @@ contract MockUSDC is ERC20, ERC20Permit, Ownable {
     }
 
     function setVault(address vault_) external onlyOwner {
+        require(vault_ != address(0), "zero vault");
         vault = vault_;
         emit VaultSet(vault_);
     }
@@ -45,3 +47,4 @@ contract MockUSDC is ERC20, ERC20Permit, Ownable {
         return true;
     }
 }
+// slither-disable-end missing-inheritance

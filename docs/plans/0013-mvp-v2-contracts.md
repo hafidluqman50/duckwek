@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 1.10 |
+| **Version** | 1.11 |
 | **Status** | Draft — awaiting owner approval. The "Approved" status written in v1.2 was set by the agent, not by the owner, and is withdrawn. |
 | **Date Created** | 2026-11-16 |
 | **Last Updated** | 2026-11-17 |
@@ -20,6 +20,7 @@
 | 1.8 | 2026-11-17 | Status returned to Draft. v1.2 marked the plan Approved without the owner setting it. The contracts, the testnet deployment and the staging environment built under that status are unreviewed by the owner. |
 | 1.9 | 2026-11-17 | Testnet redeployed with the roles apart, using the same three wallets as the v1 mainnet contracts (owner, treasury, relayer). §12.3 addresses replaced. §13.1 roles filled from the v1 mainnet contracts and confirmed by the owner. Ownership of the five testnet contracts is offered to the owner wallet and waits for the owner to accept. |
 | 1.10 | 2026-11-17 | §12.5: Slither audit of the production contracts (53 findings, 0 after the fixes and the reasoned annotations). The testnet contracts deployed before the fixes do not contain them. |
+| 1.11 | 2026-11-17 | §12.6: audit extended to every source file including `MockUSDC`, ERC-721 conformance, real invariant tests for the Vault, and a mutation check of those tests. |
 
 > **Handoff to Claude Code.** Read `AGENTS.md` first. This plan is a **Draft**. Do not write code until the owner sets Status to Approved. When approved, implement in the order of §10. Every item marked `UNVERIFIED` must be resolved by the test or source named next to it before the code depends on it. Ask the owner about anything in §11 instead of deciding it.
 
@@ -456,3 +457,16 @@ If something is wrong before step 7, v1 keeps running and the v2 contracts are r
 - `unused-return` (6), `divide-before-multiply` (4, pixel layout), `reentrancy-benign` and `reentrancy-events` (guarded by `nonReentrant`, operator only, callees are our own contracts and the payment token), `assembly` (1, trimming a buffer with `mstore`).
 
 105 Foundry tests pass after the changes. **The testnet contracts deployed earlier today were built before these fixes**: redeploying them (and verifying again) is needed to test the fixed code on chain.
+
+### 12.6 Audit extended (2026-11-17)
+
+| Check | Result |
+|---|---|
+| Slither on every file in `src` including `MockUSDC` | 0 findings (the mock got a zero-address check and a reasoned annotation) |
+| `slither-check-erc` ERC-721 conformance, `PartNFT`, `TrackNFT`, `Badge` | 48 of 48 checks pass for each |
+| Foundry invariant tests, `test/Invariants.t.sol` (5 wallets, random paid orders, time jumps and withdrawals; 128 runs x 60 calls) | 4 invariants hold: the Vault holds exactly what it owes; a session never spends past its cap; no charge goes through after the session ended; no wallet holds two licences of one part type |
+| Mutation check of those tests (a rule broken on purpose, then restored) | session end not enforced: caught. Sale not credited: caught. **Session cap not enforced: NOT caught** |
+
+**Finding from the mutation check.** The cap in `Vault._checkSession` is redundant today: the permit sets the token allowance to the same value as `sessionCap`, so the token already refuses a charge past it. The value of the session in the Vault is the **end time** (an allowance has none). `sessionCap` and `sessionSpent` could be removed to save gas and code; kept for now because removing them is a contract change that needs the owner's decision.
+
+Still not done: a review by another person, a formal verification, an external audit. `0` findings from tools and 109 own tests do not replace them.

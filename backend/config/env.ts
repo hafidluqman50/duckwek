@@ -8,6 +8,8 @@ const required = (key: string, fallback?: string): string => {
 // endpoint (Alchemy). There is no mock mode: a missing key or contract address stops the server at boot.
 export const env = {
   port: Number(process.env.PORT || 8080),
+  // Identifies the engine build in the `start` transaction, so a race is replayed with the engine it ran on (plan 0013 DoD 5).
+  engineVersion: process.env.ENGINE_VERSION || 'duckwek-engine-2',
   corsOrigins: (process.env.CORS_ORIGINS || '*').split(',').map((s) => s.trim()),
   jwtSecret: required('JWT_SECRET'),
   chainId: Number(process.env.CHAIN_ID || 10143),
@@ -19,7 +21,8 @@ export const env = {
     vault: required('VAULT'),
     usdc: required('MOCK_USDC'),
     badge: required('BADGE'),
-    duck: process.env.DUCK_NFT || '',
+    parts: required('PART_NFT'),
+    tracks: required('TRACK_NFT'),
   },
   // EIP-712 domain of the payment token (ERC20Permit). Circle USDC: name "USD Coin", version "2".
   usdcName: process.env.USDC_NAME || 'Mock USDC',

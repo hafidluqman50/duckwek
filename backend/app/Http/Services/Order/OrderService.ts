@@ -3,7 +3,7 @@ import { keccak256, toHex, type Address, type Hex } from 'viem'
 import { env } from '@config/env'
 import { joinBatcher } from '@Chain/JoinBatcher'
 import { chainPrice } from '@Chain/Prices'
-import { NO_PERMIT, relayer, toPermitArg, type OrderArg } from '@Chain/Relayer'
+import { EMPTY_LOADOUT, NO_PART, NO_PERMIT, relayer, toPermitArg, type LoadoutArg, type OrderArg } from '@Chain/Relayer'
 import { KIND, TEMPLATE_ID } from '@Chain/TypedData'
 import { PaymentRepository } from '@Repositories/Payment/PaymentRepository'
 import { RoomRepository } from '@Repositories/Room/RoomRepository'
@@ -23,6 +23,7 @@ const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 const ROOMS_PER_10_MIN = 5 // each room costs the relayer one createRoom transaction
 
 const TEMPLATE_NAME: Record<number, 'balanced' | 'sprint' | 'tank'> = { 0: 'balanced', 1: 'sprint', 2: 'tank' }
+const SLOT_INDEX: Record<string, number> = { wings: 0, tail: 1, bill: 2 }
 
 export const roomKeyOf = (code: string): Hex => keccak256(toHex(code.toUpperCase()))
 
@@ -54,9 +55,23 @@ export class OrderService {
     throw new ConflictException('Could not allocate a room code')
   }
 
-  private async templateOf(address: string): Promise<number> {
+  /**
+   * The duck this wallet races with, committed on chain with the order (plan 0013 §4.3): the template and the one equipped part
+   * (D6) in its slot. The Vault checks the licence again; checking it here gives a clear error before any gas is spent.
+   */
+  private async loadoutOf(address: string): Promise<{ arg: LoadoutArg; partTypeId: number | null }> {
     const duck = await this.duckRepository.byAddress(address)
-    return TEMPLATE_ID[duck?.template || 'balanced'] ?? 0
+    const template = TEMPLATE_ID[duck?.template || 'balanced'] ?? 0
+    const partBySlot: [number, number, number] = [NO_PART, NO_PART, NO_PART]
+    let partTypeId: number | null = null
+    if (duck?.equipped_part_type_id !== null && duck?.equipped_part_type_id !== undefined) {
+      const part = await this.catalogRepository.partByTypeId(duck.equipped_part_type_id)
+      if (part && (await this.duckRepository.ownsPart(address, part.type_id))) {
+        partBySlot[SLOT_INDEX[part.slot]] = part.type_id
+        partTypeId = part.type_id
+      }
+    }
+    return { arg: { template, partBySlot }, partTypeId }
   }
 
   /** The session of this player, or a 401 that sends the phone back to connect. */
@@ -73,8 +88,8 @@ export class OrderService {
     return this.buyPart(dto)
   }
 
-  private order(payer: string, kind: number, ref: bigint, roomKey: Hex, template: number, amount: bigint): OrderArg {
-    return { payer: payer as Address, kind, ref, roomKey, template, amount, salt: BigInt('0x' + crypto.randomBytes(16).toString('hex')) }
+  private order(payer: string, kind: number, ref: bigint, roomKey: Hex, loadout: LoadoutArg, amount: bigint): OrderArg {
+    return { payer: payer as Address, kind, ref, roomKey, loadout, amount, salt: BigInt('0x' + crypto.randomBytes(16).toString('hex')) }
   }
 
   /** The permit goes with the first paid order of a session; later orders rely on the allowance it created. */
@@ -116,7 +131,8 @@ export class OrderService {
     const price = await chainPrice(KIND.create_room, BigInt(track.token_id!))
     const s = await this.session(dto.payer, price)
     const code = await this.newCode()
-    const order = this.order(dto.payer, KIND.create_room, BigInt(track.token_id!), roomKeyOf(code), await this.templateOf(dto.payer), price)
+    const loadout = await this.loadoutOf(dto.payer)
+    const order = this.order(dto.payer, KIND.create_room, BigInt(track.token_id!), roomKeyOf(code), loadout.arg, price)
     const label = `Room · ${track.name}`
     const payment = await this.record(dto, order, s, code, label)
     let opened
@@ -138,7 +154,7 @@ export class OrderService {
       chain_room_id: String(opened.chainRoomId),
       create_tx: opened.tx.hash,
     })
-    await this.addPlayerFromProfile(room.id, dto.payer, opened.tx.hash, TEMPLATE_NAME[order.template] ?? 'balanced')
+    await this.addPlayerFromProfile(room.id, dto.payer, opened.tx.hash, TEMPLATE_NAME[loadout.arg.template] ?? 'balanced', loadout.partTypeId)
     roomEvents.emit('room:changed', room.code)
     return { tx: opened.tx.hash, url: opened.tx.url, kind: dto.kind, label, amount: price.toString(), roomCode: code }
   }
@@ -157,7 +173,8 @@ export class OrderService {
     if (this.inflight.has(key)) throw new ConflictException('Payment already pending')
     this.inflight.add(key)
     const label = `Ticket · ${room.code}`
-    const order = this.order(dto.payer, KIND.join_room, 0n, room.room_key as Hex, await this.templateOf(dto.payer), price)
+    const loadout = await this.loadoutOf(dto.payer)
+    const order = this.order(dto.payer, KIND.join_room, 0n, room.room_key as Hex, loadout.arg, price)
     const payment = await this.record(dto, order, s, room.code, label)
     let tx
     try {
@@ -168,7 +185,7 @@ export class OrderService {
       this.inflight.delete(key)
     }
     await this.settle(payment, s, price, tx.hash)
-    await this.addPlayerFromProfile(room.id, dto.payer, tx.hash, TEMPLATE_NAME[order.template] ?? 'balanced')
+    await this.addPlayerFromProfile(room.id, dto.payer, tx.hash, TEMPLATE_NAME[loadout.arg.template] ?? 'balanced', loadout.partTypeId)
     roomEvents.emit('room:changed', room.code)
     return { tx: tx.hash, url: tx.url, kind: dto.kind, label, amount: price.toString(), roomCode: room.code }
   }
@@ -180,7 +197,7 @@ export class OrderService {
     const price = await chainPrice(KIND.buy_part, BigInt(part.type_id))
     const s = await this.session(dto.payer, price)
     const label = `Part · ${part.name}`
-    const order = this.order(dto.payer, KIND.buy_part, BigInt(part.type_id), `0x${'0'.repeat(64)}`, await this.templateOf(dto.payer), price)
+    const order = this.order(dto.payer, KIND.buy_part, BigInt(part.type_id), `0x${'0'.repeat(64)}`, EMPTY_LOADOUT, price)
     const payment = await this.record(dto, order, s, null, label)
     let bought
     try {
@@ -193,9 +210,10 @@ export class OrderService {
     return { tx: bought.tx.hash, url: bought.tx.url, kind: dto.kind, label, amount: price.toString(), partTypeId: part.type_id, tokenId: bought.tokenId }
   }
 
-  /** Snapshot the player's duck into the room. A brand-new player without a duck yet gets a placeholder
-   *  that is replaced the moment they keep their duck (duck:updated). */
-  private async addPlayerFromProfile(roomId: number, address: string, joinTx: string | null, template: 'balanced' | 'sprint' | 'tank') {
+  /** Snapshot the player's duck into the room. The template and the part are the ones committed on chain with the order and
+   *  never change afterwards; a brand-new player without a duck yet gets a placeholder name and colours that are replaced the
+   *  moment they keep their duck (duck:updated). */
+  private async addPlayerFromProfile(roomId: number, address: string, joinTx: string | null, template: 'balanced' | 'sprint' | 'tank', partTypeId: number | null) {
     const duck = await this.duckRepository.byAddress(address)
     await this.roomRepository.addPlayer({
       room_id: roomId,
@@ -205,7 +223,7 @@ export class OrderService {
       body_color: duck?.body_color || '#FFFFFF',
       bill_color: duck?.bill_color || '#FF9F1C',
       cosmetics: duck?.cosmetics || { hat: false, shades: false, scarf: false },
-      part_type_id: null,
+      part_type_id: partTypeId,
       join_tx: joinTx,
       joined_on_chain: true,
     })

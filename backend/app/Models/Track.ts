@@ -25,6 +25,10 @@ class Track extends Model<InferAttributes<Track>, InferCreationAttributes<Track>
   declare path: number[][]
   declare sectors: number[]
   declare profile: TrackProfile
+  declare segments: string // hex of the on-chain layout (plan 0013 G4)
+  declare layout_version: number
+  declare layout_hash: string | null
+  declare holder: string | null // ownerOf(trackId): the one the rent and tickets are credited to
   declare status: TrackStatus
   declare created_at: CreationOptional<Date>
   declare updated_at: CreationOptional<Date>
@@ -47,6 +51,10 @@ Track.init(
     path: { type: DataTypes.JSONB, allowNull: false },
     sectors: { type: DataTypes.JSONB, allowNull: false },
     profile: { type: DataTypes.JSONB, allowNull: false },
+    segments: { type: DataTypes.TEXT, allowNull: false, defaultValue: '' },
+    layout_version: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
+    layout_hash: { type: DataTypes.STRING(66), allowNull: true },
+    holder: { type: DataTypes.STRING(42), allowNull: true },
     status: { type: DataTypes.STRING(16), allowNull: false, defaultValue: 'active' },
     created_at: DataTypes.DATE,
     updated_at: DataTypes.DATE,

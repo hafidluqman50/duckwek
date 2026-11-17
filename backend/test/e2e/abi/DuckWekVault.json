@@ -58,6 +58,45 @@
   },
   {
     "type": "function",
+    "name": "LOADOUT_TYPEHASH",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_EQUIPPED",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_JOIN_PRICE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "MAX_PLAYERS",
     "inputs": [],
     "outputs": [
@@ -65,6 +104,32 @@
         "name": "",
         "type": "uint32",
         "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MIN_JOIN_PRICE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "NO_PART",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
       }
     ],
     "stateMutability": "view"
@@ -261,6 +326,37 @@
   },
   {
     "type": "function",
+    "name": "loadoutHash",
+    "inputs": [
+      {
+        "name": "l",
+        "type": "tuple",
+        "internalType": "struct DuckWekVault.Loadout",
+        "components": [
+          {
+            "name": "template",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "partBySlot",
+            "type": "uint16[3]",
+            "internalType": "uint16[3]"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
     "name": "orderHash",
     "inputs": [
       {
@@ -289,9 +385,21 @@
             "internalType": "bytes32"
           },
           {
-            "name": "template",
-            "type": "uint8",
-            "internalType": "uint8"
+            "name": "loadout",
+            "type": "tuple",
+            "internalType": "struct DuckWekVault.Loadout",
+            "components": [
+              {
+                "name": "template",
+                "type": "uint8",
+                "internalType": "uint8"
+              },
+              {
+                "name": "partBySlot",
+                "type": "uint16[3]",
+                "internalType": "uint16[3]"
+              }
+            ]
           },
           {
             "name": "amount",
@@ -404,9 +512,21 @@
             "internalType": "bytes32"
           },
           {
-            "name": "template",
-            "type": "uint8",
-            "internalType": "uint8"
+            "name": "loadout",
+            "type": "tuple",
+            "internalType": "struct DuckWekVault.Loadout",
+            "components": [
+              {
+                "name": "template",
+                "type": "uint8",
+                "internalType": "uint8"
+              },
+              {
+                "name": "partBySlot",
+                "type": "uint16[3]",
+                "internalType": "uint16[3]"
+              }
+            ]
           },
           {
             "name": "amount",
@@ -525,9 +645,66 @@
         "internalType": "uint32"
       },
       {
-        "name": "circuitOwner",
+        "name": "layoutVersion",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "sessionCap",
+    "inputs": [
+      {
+        "name": "",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "sessionEnd",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "sessionSpent",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -619,9 +796,21 @@
             "internalType": "bytes32"
           },
           {
-            "name": "template",
-            "type": "uint8",
-            "internalType": "uint8"
+            "name": "loadout",
+            "type": "tuple",
+            "internalType": "struct DuckWekVault.Loadout",
+            "components": [
+              {
+                "name": "template",
+                "type": "uint8",
+                "internalType": "uint8"
+              },
+              {
+                "name": "partBySlot",
+                "type": "uint16[3]",
+                "internalType": "uint16[3]"
+              }
+            ]
           },
           {
             "name": "amount",
@@ -990,6 +1179,12 @@
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
+      },
+      {
+        "name": "layoutVersion",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
       }
     ],
     "anonymous": false
@@ -1012,6 +1207,31 @@
       },
       {
         "name": "paid",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SessionOpened",
+    "inputs": [
+      {
+        "name": "payer",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "end",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      },
+      {
+        "name": "cap",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -1095,6 +1315,22 @@
   },
   {
     "type": "error",
+    "name": "BadPart",
+    "inputs": [
+      {
+        "name": "slot",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "typeId",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "BadSignature",
     "inputs": []
   },
@@ -1127,6 +1363,22 @@
     "type": "error",
     "name": "InvalidShortString",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoLicense",
+    "inputs": [
+      {
+        "name": "slot",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "typeId",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ]
   },
   {
     "type": "error",
@@ -1167,6 +1419,11 @@
   },
   {
     "type": "error",
+    "name": "PriceOutOfRange",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "ReentrancyGuardReentrantCall",
     "inputs": []
   },
@@ -1198,6 +1455,27 @@
   },
   {
     "type": "error",
+    "name": "SessionCapExceeded",
+    "inputs": [
+      {
+        "name": "cap",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "wouldSpend",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "SessionExpired",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "StringTooLong",
     "inputs": [
       {
@@ -1206,6 +1484,11 @@
         "internalType": "string"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "TooManyParts",
+    "inputs": []
   },
   {
     "type": "error",

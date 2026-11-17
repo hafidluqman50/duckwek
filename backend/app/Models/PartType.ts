@@ -7,16 +7,17 @@ class PartType extends Model<InferAttributes<PartType>, InferCreationAttributes<
   declare id: CreationOptional<number>
   declare type_id: number // PartNFT on-chain type id
   declare name: string
-  declare rarity: string
   declare slot: PartSlot
   declare speed: number
   declare weight: number
   declare boost: number
+  declare color: number // fill colour of the part (on-chain trait), 0xRRGGBB
+  declare stats: Record<string, number> // every stat key of the chain registry
   declare fit: Record<string, number>
   declare price: string // USDC base units
   declare creator: string
   declare platform: boolean
-  declare status: 'active' | 'coming_soon'
+  declare status: 'active' | 'discontinued'
   declare created_at: CreationOptional<Date>
   declare updated_at: CreationOptional<Date>
 }
@@ -26,11 +27,12 @@ PartType.init(
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     type_id: { type: DataTypes.INTEGER, allowNull: false, unique: true },
     name: { type: DataTypes.STRING(64), allowNull: false },
-    rarity: { type: DataTypes.STRING(16), allowNull: false },
     slot: { type: DataTypes.STRING(16), allowNull: false },
     speed: { type: DataTypes.INTEGER, allowNull: false },
     weight: { type: DataTypes.INTEGER, allowNull: false },
     boost: { type: DataTypes.INTEGER, allowNull: false },
+    color: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0xffffff },
+    stats: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
     fit: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
     price: { type: DataTypes.BIGINT, allowNull: false },
     creator: { type: DataTypes.STRING(42), allowNull: false },

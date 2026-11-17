@@ -12,6 +12,8 @@ export interface PublicTrack {
   turns: number
   lengthM: number
   closed: boolean
+  layoutVersion: number
+  holder: string | null
   path: number[][]
   sectors: number[]
   profile: Track['profile']
@@ -22,12 +24,14 @@ export interface PublicTrack {
 export interface PublicPart {
   typeId: number
   name: string
-  rarity: string
   slot: string
   speed: number
   weight: number
   boost: number
+  color: string // #RRGGBB, the part's own fill colour (on-chain trait)
+  stats: Record<string, number>
   price: string
+  creator: string
   platform: boolean
   status: PartType['status']
   fit: Record<string, number>
@@ -53,6 +57,8 @@ export class CatalogService {
       turns: t.turns,
       lengthM: t.length_m,
       closed: t.closed,
+      layoutVersion: t.layout_version,
+      holder: t.holder,
       path: t.path,
       sectors: t.sectors,
       profile: t.profile,
@@ -71,12 +77,14 @@ export class CatalogService {
     return parts.map((p) => ({
       typeId: p.type_id,
       name: p.name,
-      rarity: p.rarity,
       slot: p.slot,
       speed: p.speed,
       weight: p.weight,
       boost: p.boost,
+      color: '#' + p.color.toString(16).padStart(6, '0').toUpperCase(),
+      stats: p.stats,
       price: String(p.price),
+      creator: p.creator,
       platform: p.platform,
       status: p.status,
       fit: Object.fromEntries(active.map((t) => [t.slug, p.fit?.[t.slug] ?? fitFor(p, t.profile)])),

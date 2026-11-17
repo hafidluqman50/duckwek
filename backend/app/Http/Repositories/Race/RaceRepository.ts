@@ -6,7 +6,7 @@ export class RaceRepository {
     return (await Race.count({ where: { room_id: roomId } })) + 1
   }
 
-  public async create(data: { room_id: number; race_id: string; seed: string; start_block: string; start_tx?: string | null }): Promise<Race> {
+  public async create(data: { room_id: number; race_id: string; seed: string; start_block: string; start_tx?: string | null; engine_version?: string | null; participants_root?: string | null; layout_version?: number | null }): Promise<Race> {
     return Race.create(data as any)
   }
 

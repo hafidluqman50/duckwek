@@ -1,8 +1,8 @@
-import { concatHex, encodeAbiParameters, keccak256, toHex, zeroAddress, type Address, type Hex } from 'viem'
+import { concatHex, encodeAbiParameters, keccak256, pad, toHex, zeroAddress, type Address, type Hex } from 'viem'
 import { env } from '@config/env'
 import { CHEER, Race as Engine, statsFor, botName, titleFor, PALETTE, type Entrant, type Profile, type Taps, type Template } from '@Engine/Race'
 import { cheersRoot, standingRoot, type CheerLog } from '@Engine/Cheers'
-import { relayer, type TickResult } from '@Chain/Relayer'
+import { NO_PART, relayer, type TickResult } from '@Chain/Relayer'
 import { joinBatcher } from '@Chain/JoinBatcher'
 import { RoomRepository } from '@Repositories/Room/RoomRepository'
 import { RaceRepository } from '@Repositories/Race/RaceRepository'
@@ -18,6 +18,11 @@ type LiveStatus = 'lobby' | 'countdown' | 'race' | 'results' | 'closed'
 
 interface Look {
   template: Template
+  /** What was committed on chain at join: part type per slot (0xFFFF = empty). The participant leaf hashes exactly this. */
+  partBySlot: [number, number, number]
+  /** The part drawn on the duck: its slot and its own fill colour (null without a part). */
+  partSlot: string | null
+  partColor: string | null
   bodyColor: string
   billColor: string
   cosmetics: { hat: boolean; shades: boolean; scarf: boolean }
@@ -34,6 +39,7 @@ interface Live {
   looks: Look[]
   profile: Profile
   laps: number
+  layoutVersion: number
   engine: Engine | null
   startBlock: number | null
   row: RaceRow | null
@@ -55,10 +61,8 @@ interface Live {
 const broadcast = (code: string, event: string, payload: unknown) => roomEvents.emit('broadcast', code, event, payload)
 // Must match the titles awarded by DuckWekRace.finalize (kind 0 = winner, 1 = runner-up, 2 = third).
 const ACHIEVEMENT = ['First Time Winner', 'First Time Runner-up', 'First Time Third']
-// DuckNFT.hatch encoding helpers (template id, #RRGGBB to uint24, cosmetics to a 3-bit mask).
 const TEMPLATE_ID: Record<string, number> = { balanced: 0, sprint: 1, tank: 2 }
-const colorToUint24 = (c: string): number => parseInt(c.replace('#', ''), 16) || 0
-const cosmeticsBits = (c: { hat?: boolean; shades?: boolean; scarf?: boolean }): number => (c.hat ? 1 : 0) | (c.shades ? 2 : 0) | (c.scarf ? 4 : 0)
+const SLOT_INDEX: Record<string, number> = { wings: 0, tail: 1, bill: 2 }
 const MAX_INFLIGHT = 8 // ticks sent but not yet in a receipt: a slow RPC must not pile up transactions
 const MAX_TAPS_PER_SECOND = 5 // accepted CHEER taps per player
 
@@ -127,8 +131,10 @@ export class RaceService {
       // The loadout part (owned, checked when it was set) changes the stats the engine races with.
       const part = p.part_type_id === null ? null : await this.catalogRepository.partByTypeId(p.part_type_id)
       const template = p.template as Template
+      const partBySlot: [number, number, number] = [NO_PART, NO_PART, NO_PART]
+      if (part) partBySlot[SLOT_INDEX[part.slot]] = part.type_id
       entrants.push({ id: p.address, name: p.duck_name, color: p.body_color, human: true, address: p.address, stats: statsFor(template, part), build: `${template}:${part?.name ?? '-'}` })
-      looks.push({ template, bodyColor: p.body_color, billColor: p.bill_color, cosmetics: p.cosmetics, partTypeId: part ? part.type_id : null })
+      looks.push({ template, partBySlot, partSlot: part ? part.slot : null, partColor: part ? '#' + part.color.toString(16).padStart(6, '0').toUpperCase() : null, bodyColor: p.body_color, billColor: p.bill_color, cosmetics: p.cosmetics, partTypeId: part ? part.type_id : null })
     }
     const total = room.fill_bots ? room.max_ducks : Math.max(entrants.length, 2)
     const templates: Template[] = ['balanced', 'sprint', 'tank']
@@ -136,14 +142,14 @@ export class RaceService {
       const t = templates[i % 3]
       const color = PALETTE[(i * 7) % PALETTE.length]
       entrants.push({ id: `bot:${i}`, name: botName(i) + (i % 9), color, human: false, address: null, stats: statsFor(t, null), build: `${t}:bot` })
-      looks.push({ template: t, bodyColor: color, billColor: '#FF9F1C', cosmetics: { hat: i % 5 === 0, shades: i % 7 === 1, scarf: false }, partTypeId: null })
+      looks.push({ template: t, partBySlot: [NO_PART, NO_PART, NO_PART], partSlot: null, partColor: null, bodyColor: color, billColor: '#FF9F1C', cosmetics: { hat: i % 5 === 0, shades: i % 7 === 1, scarf: false }, partTypeId: null })
     }
 
     const raceId = await this.raceRepository.nextRaceId(room.id)
     const track = room.track!
     const l: Live = {
       code: room.code, roomId: room.id, roomKey: room.room_key as Hex, chainRoomId, status: 'countdown', entrants, looks,
-      profile: track.profile, laps: track.laps, engine: null, startBlock: null, row: null, raceId, last: null, ticks: [], timer: null,
+      profile: track.profile, laps: track.laps, layoutVersion: track.layout_version, engine: null, startBlock: null, row: null, raceId, last: null, ticks: [], timer: null,
       inflight: 0, sent: 0, startedAt: 0, startTx: null,
       pending: {}, log: {}, rate: new Map(),
       idxOf: new Map(entrants.flatMap((e, i) => (e.address ? [[e.address.toLowerCase(), i] as [string, number]] : []))),
@@ -167,12 +173,23 @@ export class RaceService {
    * Started event of this receipt. The participant list (humans by address, bots by id) is committed before the first tick.
    */
   private async go(l: Live): Promise<void> {
-    const participantsRoot = keccak256(concatHex(l.entrants.map((e) => (e.address ? (e.address as Hex) : keccak256(toHex(e.id))))))
-    const started = await relayer.start(l.chainRoomId, l.entrants.length, participantsRoot)
+    // One leaf per duck, in join order (the order defines the duck index): who (address, or the hash of the bot id), the template and
+    // the part per slot, exactly what each player committed on chain at join. The loadout is therefore fixed before the seed exists.
+    const leaves = l.entrants.map((e, i) =>
+      keccak256(
+        encodeAbiParameters(
+          [{ type: 'bytes32' }, { type: 'uint8' }, { type: 'uint16[3]' }],
+          [e.address ? (pad(e.address as Hex, { size: 32 }) as Hex) : keccak256(toHex(e.id)), TEMPLATE_ID[l.looks[i].template] ?? 0, l.looks[i].partBySlot],
+        ),
+      ),
+    )
+    const participantsRoot = keccak256(concatHex(leaves))
+    const engineVersion = keccak256(toHex(env.engineVersion))
+    const started = await relayer.start(l.chainRoomId, l.entrants.length, participantsRoot, engineVersion)
     l.startTx = started.tx.hash
     l.startBlock = started.startBlock
     l.engine = new Engine({ raceId: l.raceId, seed: started.seed, entrants: l.entrants, profile: l.profile, laps: l.laps })
-    l.row = await this.raceRepository.create({ room_id: l.roomId, race_id: String(l.raceId), seed: started.seed, start_block: String(started.startBlock), start_tx: started.tx.hash })
+    l.row = await this.raceRepository.create({ room_id: l.roomId, race_id: String(l.raceId), seed: started.seed, start_block: String(started.startBlock), start_tx: started.tx.hash, engine_version: engineVersion, participants_root: participantsRoot, layout_version: l.layoutVersion })
     l.status = 'race'
     l.startedAt = Date.now()
     const room = await this.roomService.mustGet(l.code)
@@ -335,31 +352,21 @@ export class RaceService {
     for (const t of titles) await this.duckRepository.addTitle({ address: t.address, room_code: l.code, race_id: String(l.raceId), rank: t.rank, title: t.title, tx_hash: finalizeTx?.hash ?? null })
     broadcast(l.code, 'race:settled', { raceId: l.raceId, tx: finalizeTx?.hash ?? null, url: finalizeTx?.url ?? null, titles, ok: !!finalizeTx })
 
-    // First paid race done: hatch the egg into a Duck NFT in the player's own wallet (never blocks the result above).
+    // First paid race done: the egg hatches. This is only a moment in the UI (plan 0013 D2: no Duck NFT), nothing is minted.
     if (finalizeTx) void this.hatchFirstTimers(l)
   }
 
-  /** Each egg is minted once, by the operator, into the player's own wallet. One failure never stops the others. */
+  /** Marks each first-time racer's duck as hatched and tells the phone to play the hatch moment. */
   private async hatchFirstTimers(l: Live): Promise<void> {
     const ranking = (l.last as { ranking?: { address: string | null; human: boolean }[] } | null)?.ranking ?? []
     for (const r of ranking) {
       if (!r.human || !r.address) continue
-      const duck = await this.duckRepository.byAddress(r.address)
-      if (!duck || duck.status !== 'egg') continue
       try {
-        await duck.update({ status: 'hatching' })
-        const { tx, tokenId } = await relayer.hatch(r.address as Address, {
-          name: duck.name,
-          template: TEMPLATE_ID[duck.template] ?? 0,
-          bodyColor: colorToUint24(duck.body_color),
-          billColor: colorToUint24(duck.bill_color),
-          cosmetics: cosmeticsBits(duck.cosmetics),
-        })
-        await duck.update({ status: 'hatched', token_id: tokenId, tx_hash: tx.hash })
-        broadcast(l.code, 'duck:hatched', { address: r.address, tokenId, tx: tx.hash, url: tx.url })
-        console.log(`[hatch] room ${l.code} ${r.address} duck #${tokenId} ${tx.hash}`)
+        const duck = await this.duckRepository.byAddress(r.address)
+        if (!duck || duck.status !== 'egg') continue
+        await duck.update({ status: 'hatched' })
+        broadcast(l.code, 'duck:hatched', { address: r.address })
       } catch (err) {
-        await duck.update({ status: 'failed' })
         console.error(`[hatch] room ${l.code} player ${r.address}:`, (err as any)?.shortMessage || (err as Error).message)
       }
     }

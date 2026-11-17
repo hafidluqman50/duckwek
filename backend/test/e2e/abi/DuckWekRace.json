@@ -102,9 +102,21 @@
             "internalType": "bytes32"
           },
           {
-            "name": "template",
-            "type": "uint8",
-            "internalType": "uint8"
+            "name": "loadout",
+            "type": "tuple",
+            "internalType": "struct DuckWekVault.Loadout",
+            "components": [
+              {
+                "name": "template",
+                "type": "uint8",
+                "internalType": "uint8"
+              },
+              {
+                "name": "partBySlot",
+                "type": "uint16[3]",
+                "internalType": "uint16[3]"
+              }
+            ]
           },
           {
             "name": "amount",
@@ -184,9 +196,21 @@
             "internalType": "bytes32"
           },
           {
-            "name": "template",
-            "type": "uint8",
-            "internalType": "uint8"
+            "name": "loadout",
+            "type": "tuple",
+            "internalType": "struct DuckWekVault.Loadout",
+            "components": [
+              {
+                "name": "template",
+                "type": "uint8",
+                "internalType": "uint8"
+              },
+              {
+                "name": "partBySlot",
+                "type": "uint16[3]",
+                "internalType": "uint16[3]"
+              }
+            ]
           },
           {
             "name": "amount",
@@ -319,9 +343,21 @@
             "internalType": "bytes32"
           },
           {
-            "name": "template",
-            "type": "uint8",
-            "internalType": "uint8"
+            "name": "loadout",
+            "type": "tuple",
+            "internalType": "struct DuckWekVault.Loadout",
+            "components": [
+              {
+                "name": "template",
+                "type": "uint8",
+                "internalType": "uint8"
+              },
+              {
+                "name": "partBySlot",
+                "type": "uint16[3]",
+                "internalType": "uint16[3]"
+              }
+            ]
           },
           {
             "name": "amount",
@@ -493,8 +529,8 @@
       },
       {
         "name": "trackId",
-        "type": "uint8",
-        "internalType": "uint8"
+        "type": "uint64",
+        "internalType": "uint64"
       },
       {
         "name": "startBlock",
@@ -558,6 +594,11 @@
       },
       {
         "name": "participantsRoot",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "engineVersion",
         "type": "bytes32",
         "internalType": "bytes32"
       }
@@ -709,10 +750,22 @@
         "internalType": "address"
       },
       {
-        "name": "template",
-        "type": "uint8",
+        "name": "loadout",
+        "type": "tuple",
         "indexed": false,
-        "internalType": "uint8"
+        "internalType": "struct DuckWekVault.Loadout",
+        "components": [
+          {
+            "name": "template",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "partBySlot",
+            "type": "uint16[3]",
+            "internalType": "uint16[3]"
+          }
+        ]
       }
     ],
     "anonymous": false
@@ -811,9 +864,15 @@
       },
       {
         "name": "trackId",
-        "type": "uint8",
+        "type": "uint64",
         "indexed": false,
-        "internalType": "uint8"
+        "internalType": "uint64"
+      },
+      {
+        "name": "layoutVersion",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
       },
       {
         "name": "paid",
@@ -854,6 +913,12 @@
       },
       {
         "name": "seed",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "engineVersion",
         "type": "bytes32",
         "indexed": false,
         "internalType": "bytes32"
@@ -964,11 +1029,6 @@
   {
     "type": "error",
     "name": "RoomKeyUsed",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "TrackOutOfRange",
     "inputs": []
   },
   {

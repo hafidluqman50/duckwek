@@ -1,0 +1,25 @@
+# STAGING (Monad testnet, chain 10143). Separate app from prod (`duckwek-api` in fly.toml): never deploy this file to prod.
+# Cost control: the machine stops by itself when idle and starts on the first request, and no machine is kept running.
+#   fly apps create duckwek-stage-api
+#   fly secrets import -a duckwek-stage-api --stage < <(grep needed keys of .env.staging)
+#   fly deploy -c fly.stage.toml --ha=false      (one machine only: live races and sockets are in memory)
+#   fly machine stop -a duckwek-stage-api <id>    (stop it right after a test session)
+app = "duckwek-stage-api"
+primary_region = "sin"
+
+[build]
+
+[env]
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1

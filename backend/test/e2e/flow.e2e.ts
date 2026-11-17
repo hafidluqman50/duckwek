@@ -29,7 +29,18 @@ async function main() {
   const me0 = await call('/api/me', 'GET', undefined, ht)
   assert(BigInt(me0.usdc) >= 5_000_000n, 'a new wallet shows the 5 USDC welcome before its first order')
 
-  // 2. create room (1 USDC) and join (0.10 USDC), with no signature after connect
+  // 2. parts are bought and equipped BEFORE joining: the loadout is committed on chain with the join order (plan 0013 §4.3)
+  const boughtHost = await order(ht, { kind: 'buy_part', partTypeId: 0 })
+  assert(boughtHost.amount === '1000000', 'a part costs 1 USDC')
+  await call('/api/me/duck', 'PUT', { ...duck('HostDuck', 'tank'), equippedPartTypeId: 0 }, ht)
+  await order(t1, { kind: 'buy_part', partTypeId: 1 })
+  await call('/api/me/duck', 'PUT', { ...duck('Alice', 'sprint'), equippedPartTypeId: 1 }, t1)
+  const me1 = await call('/api/me', 'GET', undefined, ht)
+  assert(me1.parts.includes(0), 'the part licence is in the wallet')
+  assert(BigInt(me1.usdc) < BigInt(me0.usdc), 'USDC went down after the payment')
+  console.log('✓ buy + equip a part before joining, USDC', me0.usdc, '→', me1.usdc)
+
+  // 3. create room (1 USDC) and join (0.10 USDC), with no signature after connect
   const tracks = await call('/api/catalog/tracks')
   const kali = tracks.find((t: any) => t.slug === 'kali-code-sprint')
   const created = await order(ht, { kind: 'create_room', trackId: kali.id, roomName: 'E2E Real', maxDucks: 20, fillBots: true })
@@ -39,14 +50,16 @@ async function main() {
   assert(j1.amount === '100000' && j2.amount === '100000', 'a ticket costs 0.10 USDC')
   console.log('✓ create + 2 joins paid under the session', code)
 
-  // 3. buy a part (1 USDC) with the same session, equip it for this room
-  const bought = await order(ht, { kind: 'buy_part', partTypeId: 0 })
-  assert(bought.amount === '1000000', 'a part costs 1 USDC')
-  await call(`/api/rooms/${code}/loadout`, 'PUT', { partTypeId: 0 }, ht)
-  const me1 = await call('/api/me', 'GET', undefined, ht)
-  assert(me1.parts.includes(0), 'the part license is in the wallet')
-  assert(BigInt(me1.usdc) < BigInt(me0.usdc), 'USDC went down after the payments')
-  console.log('✓ buy part + loadout, USDC', me0.usdc, '→', me1.usdc)
+  // the loadout that was committed on chain is the one the room shows, and it cannot change after joining
+  const state = await call(`/api/rooms/${code}`)
+  const byAddr = (a: string) => state.players.find((p: any) => p.address.toLowerCase() === a.toLowerCase())
+  assert(byAddr(host.address).partTypeId === 0 && byAddr(host.address).template === 'tank', 'the host races with the part and template committed at create')
+  assert(byAddr(p1.address).partTypeId === 1 && byAddr(p1.address).template === 'sprint', 'Alice races with the part and template committed at join')
+  assert(byAddr(p2.address).partTypeId === null, 'Bob joined without a part')
+  let locked = false
+  try { await call(`/api/rooms/${code}/loadout`, 'PUT', { partTypeId: 0 }, t2) } catch (e) { locked = (e as any).status === 409 }
+  assert(locked, 'a loadout cannot change after the join committed it on chain')
+  console.log('✓ the loadout is committed at join and locked')
 
   // 4. a second order of the same kind is rejected, and nothing can be charged without a session
   const again = await order(ht, { kind: 'join_room', roomCode: code })
@@ -116,7 +129,7 @@ async function main() {
   const phases: [string, string[]][] = [
     ['create room', [created.tx]],
     ['joins (batch)', [...new Set([j1.tx, j2.tx])]],
-    ['buy part', [bought.tx]],
+    ['buy part', [boughtHost.tx]],
     ['start', [go.tx]],
     [`${tickHashes.length} ticks`, tickHashes],
     ['finalize', [settled.tx]],

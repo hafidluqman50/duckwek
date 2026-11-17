@@ -22,8 +22,6 @@ export interface PublicDuck {
   titles: number
   bestRank: number | null
   status: Duck['status']
-  tokenId: string | null
-  hatchTx: string | null
 }
 
 export const toPublicDuck = (d: Duck): PublicDuck => ({
@@ -37,8 +35,6 @@ export const toPublicDuck = (d: Duck): PublicDuck => ({
   titles: d.titles,
   bestRank: d.best_rank,
   status: d.status,
-  tokenId: d.token_id,
-  hatchTx: d.tx_hash,
 })
 
 export class ProfileService {

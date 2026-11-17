@@ -4,6 +4,7 @@ import { CatalogService, PublicTrack } from '@Services/Catalog/CatalogService'
 import { LoadoutDTO } from '@DTOs/LoadoutDTO'
 import { NotFoundException } from '@Exceptions/NotFoundException'
 import { ForbiddenException } from '@Exceptions/ForbiddenException'
+import { ConflictException } from '@Exceptions/ConflictException'
 import { Room } from '@Models/Room'
 import { roomEvents } from './RoomEvents'
 
@@ -71,14 +72,15 @@ export class RoomService {
     }
   }
 
-  /** Per-race loadout: swap which owned part this duck races with in this room. */
+  /**
+   * The loadout is committed on chain with the join order (plan 0013 §4.3) and fixes what the race uses, so it cannot change after
+   * joining. The part is chosen before joining (the equipped part of the duck profile).
+   */
   public async setLoadout(dto: LoadoutDTO): Promise<void> {
     const room = await this.mustGet(dto.roomCode)
     const player = await this.roomRepository.player(room.id, dto.address)
     if (!player) throw new ForbiddenException('Join the room first')
-    if (dto.partTypeId !== null && !(await this.duckRepository.ownsPart(dto.address, dto.partTypeId))) throw new ForbiddenException('You do not own that part yet')
-    await player.update({ part_type_id: dto.partTypeId })
-    roomEvents.emit('room:changed', room.code)
+    throw new ConflictException('Your loadout was committed on chain when you joined. Equip a part before joining a room.')
   }
 
   /** Called when a duck profile changes: refresh the snapshot in rooms that are still in the lobby. */
@@ -91,7 +93,8 @@ export class RoomService {
     for (const rp of rows) {
       const room = (rp as any).room as Room | undefined
       if (!room || room.status !== 'lobby') continue
-      await rp.update({ duck_name: duck.name, template: duck.template, body_color: duck.body_color, bill_color: duck.bill_color, cosmetics: duck.cosmetics })
+      // Only the looks follow the profile: the template and the part were committed on chain at join and stay as they were.
+      await rp.update({ duck_name: duck.name, body_color: duck.body_color, bill_color: duck.bill_color, cosmetics: duck.cosmetics })
       codes.push(room.code)
     }
     return codes

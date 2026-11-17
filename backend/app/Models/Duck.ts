@@ -7,11 +7,11 @@ export interface Cosmetics {
   shades: boolean
   scarf: boolean
 }
-export type DuckStatus = 'egg' | 'hatching' | 'hatched' | 'failed'
+export type DuckStatus = 'egg' | 'hatched'
 
 /**
- * The duck IS the player profile (one per wallet). It is an "egg" off-chain until the wallet
- * finishes its first paid race, then the operator hatches it into a DuckNFT.
+ * The duck IS the player profile (one per wallet), off-chain only (plan 0013 D2: no Duck NFT). It is an "egg" until the wallet
+ * finishes its first paid race; "hatched" is just that moment, shown in the UI.
  */
 class Duck extends Model<InferAttributes<Duck>, InferCreationAttributes<Duck>> {
   declare id: CreationOptional<number>
@@ -26,8 +26,6 @@ class Duck extends Model<InferAttributes<Duck>, InferCreationAttributes<Duck>> {
   declare titles: CreationOptional<number>
   declare best_rank: number | null
   declare status: CreationOptional<DuckStatus>
-  declare token_id: string | null
-  declare tx_hash: string | null
   declare created_at: CreationOptional<Date>
   declare updated_at: CreationOptional<Date>
 }
@@ -46,8 +44,6 @@ Duck.init(
     titles: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
     best_rank: { type: DataTypes.INTEGER, allowNull: true },
     status: { type: DataTypes.STRING(16), allowNull: false, defaultValue: 'egg' },
-    token_id: { type: DataTypes.STRING(78), allowNull: true },
-    tx_hash: { type: DataTypes.STRING(66), allowNull: true },
     created_at: DataTypes.DATE,
     updated_at: DataTypes.DATE,
   },

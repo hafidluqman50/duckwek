@@ -10,6 +10,7 @@ import '@Models/index'
 import { connectDatabase } from '@config/database'
 import { env } from '@config/env'
 import { rpcStats } from '@Chain/RpcStats'
+import { startCatalogSync } from '@Chain/CatalogSync'
 import { registerRaceGateway } from '@Sockets/RaceGateway'
 import authRoutes from '@routes/auth/api'
 import meRoutes from '@routes/me/api'
@@ -66,6 +67,7 @@ console.log(`
 
 const boot = async () => {
   await connectDatabase()
+  await startCatalogSync() // the catalog (parts, circuits, stats, layouts) is read from the chain, not seeded
   server.listen(env.port, () => console.log(`[server]: Server is running at http://localhost:${env.port}`))
 }
 

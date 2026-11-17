@@ -6,8 +6,20 @@
         "name": "owner_",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "tracks_",
+        "type": "address",
+        "internalType": "address"
       }
     ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "acceptOwnership",
+    "inputs": [],
+    "outputs": [],
     "stateMutability": "nonpayable"
   },
   {
@@ -51,6 +63,11 @@
         "name": "rank",
         "type": "uint16",
         "internalType": "uint16"
+      },
+      {
+        "name": "trackId",
+        "type": "uint64",
+        "internalType": "uint64"
       },
       {
         "name": "title",
@@ -128,6 +145,13 @@
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "lockRenderer",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -215,6 +239,45 @@
         "name": "",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "pendingOwner",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "renderer",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IBadgeRenderer"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "rendererLocked",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "stateMutability": "view"
@@ -310,6 +373,19 @@
   },
   {
     "type": "function",
+    "name": "setRenderer",
+    "inputs": [
+      {
+        "name": "r",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "supportsInterface",
     "inputs": [
       {
@@ -367,6 +443,11 @@
         "internalType": "uint16"
       },
       {
+        "name": "trackId",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
         "name": "title",
         "type": "string",
         "internalType": "string"
@@ -389,6 +470,19 @@
         "name": "",
         "type": "string",
         "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "tracks",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract ITrackNames"
       }
     ],
     "stateMutability": "view"
@@ -494,6 +588,38 @@
   },
   {
     "type": "event",
+    "name": "MinterSet",
+    "inputs": [
+      {
+        "name": "minter",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "OwnershipTransferStarted",
+    "inputs": [
+      {
+        "name": "previousOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "newOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "OwnershipTransferred",
     "inputs": [
       {
@@ -506,6 +632,25 @@
         "name": "newOwner",
         "type": "address",
         "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RendererLockedSet",
+    "inputs": [],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RendererSet",
+    "inputs": [
+      {
+        "name": "renderer",
+        "type": "address",
+        "indexed": false,
         "internalType": "address"
       }
     ],
@@ -641,6 +786,16 @@
   },
   {
     "type": "error",
+    "name": "MinterAlreadySet",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoRenderer",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "NotMinter",
     "inputs": []
   },
@@ -665,6 +820,11 @@
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "RendererIsLocked",
+    "inputs": []
   },
   {
     "type": "error",

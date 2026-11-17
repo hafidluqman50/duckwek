@@ -128,7 +128,7 @@ export function stepFor(stats: [number, number, number], progress: number, leade
   return trunc((gain * (SCALE + cheerPpm)) / SCALE)
 }
 
-const BOT_PRE = ['Quack', 'Buroq', 'Wek', 'Paddle', 'Monad', 'Bebek', 'Mallard', 'Splash', 'Feather', 'Bill', 'Tiki', 'Jogja', 'Gudeg', 'Merapi']
+const BOT_PRE = ['Quack', 'Kite', 'Wek', 'Paddle', 'Monad', 'Bebek', 'Mallard', 'Splash', 'Feather', 'Bill', 'Tiki', 'Jogja', 'Gudeg', 'Merapi']
 const BOT_SUF = ['Jr', 'King', 'Queen', 'Bro', 'Max', 'X', '77', 'Boy', 'Gang', 'Pro', 'Zz', 'One']
 export const PALETTE = ['#ffffff', '#FF7AB6', '#4ED1C5', '#FF9F1C', '#7CC6FE', '#B8F35A', '#C9B8FF', '#F25F5C', '#9BE7FF', '#FFE59A']
 export function botName(i: number): string {

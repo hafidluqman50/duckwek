@@ -1,7 +1,7 @@
 import { decodeErrorResult, encodeFunctionData, parseEventLogs, parseSignature, type Abi, type Address, type Hex } from 'viem'
 import { env } from '@config/env'
 import { addresses, operator, publicClient, sendClient, txUrl } from './Contracts'
-import { duckAbi, raceAbi, vaultAbi } from './abis'
+import { raceAbi, vaultAbi } from './abis'
 
 export interface TxResult {
   hash: Hex
@@ -20,12 +20,20 @@ export interface TickResult {
   ms: number
 }
 
+/** The duck a player races with, committed on chain with the order (0xFFFF = empty slot; slot 0 Wings, 1 Tail, 2 Bill). */
+export interface LoadoutArg {
+  template: number
+  partBySlot: readonly [number, number, number]
+}
+export const NO_PART = 0xffff
+export const EMPTY_LOADOUT: LoadoutArg = { template: 0, partBySlot: [NO_PART, NO_PART, NO_PART] }
+
 export interface OrderArg {
   payer: Address
   kind: number
   ref: bigint
   roomKey: Hex
-  template: number
+  loadout: LoadoutArg
   amount: bigint
   salt: bigint
 }
@@ -141,8 +149,8 @@ class Relayer {
   }
 
   /** Starts the race on-chain. The seed and the start block come from the Started event of this receipt. */
-  async start(chainRoomId: number, players: number, participantsRoot: Hex): Promise<{ tx: TxResult; seed: Hex; startBlock: number }> {
-    const tx = await this.write('start', addresses.race, raceAbi, 'start', [BigInt(chainRoomId), players, participantsRoot])
+  async start(chainRoomId: number, players: number, participantsRoot: Hex, engineVersion: Hex): Promise<{ tx: TxResult; seed: Hex; startBlock: number }> {
+    const tx = await this.write('start', addresses.race, raceAbi, 'start', [BigInt(chainRoomId), players, participantsRoot, engineVersion])
     const ev = parseEventLogs({ abi: raceAbi, logs: tx.logs, eventName: 'Started' })[0]
     if (!ev) throw new Error('Started event not found in the start receipt')
     return { tx, seed: ev.args.seed, startBlock: Number(ev.args.startBlock) }
@@ -164,15 +172,6 @@ class Relayer {
   /** First-time achievements awarded by this finalize (kind 0 winner, 1 runner-up, 2 third). */
   achievements(tx: TxResult): { address: string; kind: number }[] {
     return parseEventLogs({ abi: raceAbi, logs: tx.logs, eventName: 'AchievementAwarded' }).map((ev) => ({ address: String(ev.args.player).toLowerCase(), kind: Number(ev.args.kind) }))
-  }
-
-  /** Mint the duck into the player's own wallet. One per wallet, enforced on chain (`AlreadyHatched`). */
-  async hatch(to: Address, d: { name: string; template: number; bodyColor: number; billColor: number; cosmetics: number }): Promise<{ tx: TxResult; tokenId: string }> {
-    if (!addresses.duck) throw new Error('DUCK_NFT is not configured')
-    const tx = await this.write('hatch', addresses.duck, duckAbi, 'hatch', [to, d])
-    const ev = parseEventLogs({ abi: duckAbi, logs: tx.logs, eventName: 'DuckHatched' })[0]
-    if (!ev) throw new Error('DuckHatched event not found in the receipt')
-    return { tx, tokenId: String(ev.args.tokenId) }
   }
 
   withdraw(w: { owner: Address; to: Address; amount: bigint; nonce: bigint; deadline: bigint }, signature: Hex) {

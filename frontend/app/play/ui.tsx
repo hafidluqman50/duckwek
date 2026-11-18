@@ -9,7 +9,7 @@ import { startRace } from '@/http/rooms/roomsApi'
 import { sound } from '@/lib/sound'
 import { randomDuck, type Duck } from '@/lib/types'
 import { Header, Toast, SignSheet, WalletSheet, BottomNav } from '@/components/play/Shell'
-import { Splash, Connect, JoinTicket, Hatch } from '@/components/play/Onboarding'
+import { Splash, Connect, Reconnect, JoinTicket, Hatch } from '@/components/play/Onboarding'
 import { Home, MyDuck, Garage, CreateRoom, Hosted } from '@/components/play/Profile'
 import { Lobby, Countdown, RaceView, RacePanel, PhotoFinish, Result } from '@/components/play/RaceScreens'
 import { GridSlot } from '@/components/play/GridSlot'
@@ -26,7 +26,7 @@ export function PlayPage({ entry }: { entry?: 'create' } = {}) {
   const invite = params.get('room')?.toUpperCase() || null
   const session = useSession()
   const wide = useWide()
-  const { ready, me, pay, refresh, say, tracks } = session
+  const { ready, me, walletState, pay, refresh, say, tracks } = session
   const [screen, setScreen] = useState<Screen>('splash')
   const [code, setCode] = useState<string | null>(invite)
   const [draft, setDraft] = useState<Draft>(() => randomDuck())
@@ -234,6 +234,7 @@ export function PlayPage({ entry }: { entry?: 'create' } = {}) {
   else if (racing && live.grid && phase === 'race') body = <RaceView room={room!} grid={live.grid} tick={live.tick} myAddress={address} gap={live.blockGap} wide={wide} />
   else if (racing && phase === 'photo') body = <PhotoFinish />
   else if (racing && phase === 'result' && live.result) body = <Result result={live.result} settled={live.settled} hatched={live.hatched} myAddress={address} duckName={me?.duck?.name || draft.name} trackName={room!.track.name} onHome={() => { live.reset(); leaveRoom('home') }} onNewRoom={() => { live.reset(); leaveRoom('create') }} />
+  else if (walletState === 'reconnect') body = <Reconnect />
   else if (screen === 'splash') body = <Splash invite={invite ? room : null} onStart={() => setScreen('connect')} />
   else if (screen === 'connect') body = <Connect />
   else if (screen === 'join' && room) body = <JoinTicket room={room} hasDuck={!!me?.duck} duckName={me?.duck?.name || ''} busy={busy} onPay={() => payJoin(room.code)} />
@@ -247,7 +248,7 @@ export function PlayPage({ entry }: { entry?: 'create' } = {}) {
   else if (screen === 'lobby' && room) body = <Lobby room={room} myAddress={address} onStart={start} starting={starting} />
   else body = <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Dots /></div>
 
-  const showSide = wide && !!me?.duck && !['splash', 'connect'].includes(screen)
+  const showSide = wide && !!me?.duck && walletState !== 'reconnect' && !['splash', 'connect'].includes(screen)
   const racePanel = wide && racing && !!live.grid && (phase === 'race' || phase === 'photo')
   const columns = [showSide ? '240px' : '', 'minmax(0, 1fr)', racePanel ? '400px' : ''].filter(Boolean).join(' ')
 

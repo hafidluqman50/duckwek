@@ -74,6 +74,23 @@ export function Connect() {
   )
 }
 
+export function Reconnect() {
+  const { reconnectWallet, signOut } = useSession()
+
+  return (
+    <div className="anim-enter" style={{ position: 'absolute', inset: 0, padding: '18px 20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <Kicker>WALLET DISCONNECTED</Kicker>
+      <Title>Reconnect your wallet</Title>
+      <div style={{ fontSize: 14, fontWeight: 700 }}>Your wallet is not connected to DuckWek right now. Connect it again to keep playing. Your duck and your session are saved.</div>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <DuckSvg template="balanced" bodyColor="#4ED1C5" billColor="#FFC93C" cosmetics={{ hat: false, shades: false, scarf: false }} width={140} />
+      </div>
+      <Button height={64} fontSize={20} onClick={reconnectWallet}>Reconnect with wallet</Button>
+      <button type="button" onClick={signOut} style={{ height: 36, background: 'none', border: 'none', color: '#1E1446', fontSize: 14, fontWeight: 800, textDecoration: 'underline' }}>Sign out</button>
+    </div>
+  )
+}
+
 export function JoinTicket({ room, hasDuck, duckName, onPay, busy }: { room: RoomState; hasDuck: boolean; duckName: string; onPay: () => void; busy: boolean }) {
   const trackGeometry = buildTrackGeometry(room.track.path, room.track.closed, room.track.laps)
 

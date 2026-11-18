@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 1.1 |
+| **Version** | 1.2 |
 | **Status** | Draft |
 | **Date Created** | 2026-11-18 |
 | **Last Updated** | 2026-11-18 |
@@ -11,6 +11,7 @@
 |---|---|---|
 | 1.0 | 2026-11-18 | Initial draft after the owner's report on staging: after disconnecting the site in MetaMask the app still looked signed in and then asked for a signature. |
 | 1.1 | 2026-11-18 | §1 P5 and P6, §2 DoD 9 and 10, §8 V8 and V9, §9: second report from the owner, MetaMask on Android: after signing in the wallet app the session is gone. WalletConnect project id missing; sign-in intent kept only in memory. |
+| 1.2 | 2026-11-18 | §1 P5 corrected: on a phone the RainbowKit MetaMask button uses the MetaMask SDK connector, not WalletConnect (RainbowKit 2.2.11, `metaMaskWallet`: `shouldUseMetaMaskConnector = isMetaMaskInjected \|\| isMobile()`), so the missing WalletConnect project id is not the cause of the Android failure. The project id stays needed for the WalletConnect option. The cause of the Android failure is OPEN. |
 
 ## 1. Problem Statement
 
@@ -25,7 +26,7 @@ Findings, read from `frontend/contexts/SessionContext.tsx`, `frontend/http/clien
 | P3 | With no wallet connected the wallet signer is `null`. Any paid action ends with the toast `Connect first`: a dead end, with no reconnect button. | `SessionContext.tsx:259-263` |
 | P4 | When the wallet connects again, `connectWallet` always opens the "Sign in to DuckWek" sheet and asks for a signature, even when a valid session for the same address is still stored. | `SessionContext.tsx:225-233` |
 
-| P5 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` is not set in the Vercel project `duckwek-stage` (listed variables: addresses, API, RPC, chain, explorer, app URL) nor in `frontend/.env.local`, so `lib/config.ts:5` falls back to the placeholder `duckwek-dev`, which is not a registered project id. Plan 0010 marks the variable "Optional; injected wallets work without it": true for a desktop extension, not for a phone browser, which has no injected wallet and reaches MetaMask through WalletConnect. | `lib/config.ts:5`, `lib/wagmi.ts:23-26`, plan 0010 §env table |
+| P5 | (corrected in v1.2) `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` was missing in `duckwek-stage` and now is set. It matters for the WalletConnect option and desktop QR. It does NOT affect the MetaMask button on a phone, which uses the MetaMask SDK connector. | `lib/config.ts:5`, RainbowKit `metaMaskWallet` |
 | P6 | The intent "sign in after the wallet connects" is a React ref (`wantWalletSignIn`), held in memory only. A phone browser can reload or restore the tab when it returns from the wallet app; the ref is then false and nothing signs in, so the app looks as if the sign-in vanished. UNVERIFIED. | `SessionContext.tsx` (`wantWalletSignIn`) |
 
 P1 and P2 are why the app looked signed in. P3 is the missing reconnect option. P4 is the unnecessary signature. UNVERIFIED: which of these produced the exact prompt the owner saw; the Verification Plan resolves it with a scripted wallet test.
@@ -126,7 +127,7 @@ flowchart TD
 | V5 | Passkey and device sign-in still reach home; the Reconnect screen never shows for them | DoD 7 |
 | V6 | `tsc --noEmit`, lint count not higher than the baseline, `next build` | regressions |
 | V8 | On a real Android phone with MetaMask, on staging: connect, sign in the wallet app, return to the browser; also force a tab reload while in the wallet app | DoD 9, P5, P6 |
-| V9 | After setting the project id, the WalletConnect relay accepts the project (no origin or project error in the browser console) | DoD 10, P5 |
+| V9 | The WalletConnect option accepts the project id (no origin or project error in the browser console) | DoD 10 |
 | V7 | On staging, with real MetaMask: disconnect the site in MetaMask and reload | the owner's report, UNVERIFIED P1–P4 |
 
 ## 9. Decisions for the owner

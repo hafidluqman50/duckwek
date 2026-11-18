@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 1.0 |
+| **Version** | 1.1 |
 | **Status** | Draft |
 | **Date Created** | 2026-11-18 |
 | **Last Updated** | 2026-11-18 |
@@ -10,6 +10,7 @@
 | Version | Date | Change |
 |---|---|---|
 | 1.0 | 2026-11-18 | Initial draft after the owner's report on staging: after disconnecting the site in MetaMask the app still looked signed in and then asked for a signature. |
+| 1.1 | 2026-11-18 | §1 P5 and P6, §2 DoD 9 and 10, §8 V8 and V9, §9: second report from the owner, MetaMask on Android: after signing in the wallet app the session is gone. WalletConnect project id missing; sign-in intent kept only in memory. |
 
 ## 1. Problem Statement
 
@@ -24,6 +25,9 @@ Findings, read from `frontend/contexts/SessionContext.tsx`, `frontend/http/clien
 | P3 | With no wallet connected the wallet signer is `null`. Any paid action ends with the toast `Connect first`: a dead end, with no reconnect button. | `SessionContext.tsx:259-263` |
 | P4 | When the wallet connects again, `connectWallet` always opens the "Sign in to DuckWek" sheet and asks for a signature, even when a valid session for the same address is still stored. | `SessionContext.tsx:225-233` |
 
+| P5 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` is not set in the Vercel project `duckwek-stage` (listed variables: addresses, API, RPC, chain, explorer, app URL) nor in `frontend/.env.local`, so `lib/config.ts:5` falls back to the placeholder `duckwek-dev`, which is not a registered project id. Plan 0010 marks the variable "Optional; injected wallets work without it": true for a desktop extension, not for a phone browser, which has no injected wallet and reaches MetaMask through WalletConnect. | `lib/config.ts:5`, `lib/wagmi.ts:23-26`, plan 0010 §env table |
+| P6 | The intent "sign in after the wallet connects" is a React ref (`wantWalletSignIn`), held in memory only. A phone browser can reload or restore the tab when it returns from the wallet app; the ref is then false and nothing signs in, so the app looks as if the sign-in vanished. UNVERIFIED. | `SessionContext.tsx` (`wantWalletSignIn`) |
+
 P1 and P2 are why the app looked signed in. P3 is the missing reconnect option. P4 is the unnecessary signature. UNVERIFIED: which of these produced the exact prompt the owner saw; the Verification Plan resolves it with a scripted wallet test.
 
 ## 2. Definition of Done
@@ -36,6 +40,8 @@ P1 and P2 are why the app looked signed in. P3 is the missing reconnect option. 
 6. A paid action with no connected wallet opens the Reconnect screen instead of the `Connect first` toast.
 7. Passkey and device wallets are not affected.
 8. No contract or backend change.
+9. On Android, tap Connect in the browser, approve and sign in the MetaMask app, return to the browser: the app is signed in (survives a tab reload).
+10. The WalletConnect project id comes from the environment of every deployment (staging and production); the placeholder fallback is not used.
 
 ## 3. Feature Description
 
@@ -119,8 +125,11 @@ flowchart TD
 | V4 | Tap a paid action with no wallet; expect the Reconnect screen, no `Connect first` toast | DoD 6, P3 |
 | V5 | Passkey and device sign-in still reach home; the Reconnect screen never shows for them | DoD 7 |
 | V6 | `tsc --noEmit`, lint count not higher than the baseline, `next build` | regressions |
+| V8 | On a real Android phone with MetaMask, on staging: connect, sign in the wallet app, return to the browser; also force a tab reload while in the wallet app | DoD 9, P5, P6 |
+| V9 | After setting the project id, the WalletConnect relay accepts the project (no origin or project error in the browser console) | DoD 10, P5 |
 | V7 | On staging, with real MetaMask: disconnect the site in MetaMask and reload | the owner's report, UNVERIFIED P1–P4 |
 
-## 9. Decision for the owner
+## 9. Decisions for the owner
 
-After the wallet reconnects with the same address, should the app resume without a new signature (recommended: the stored session was already signed and is valid for 24 hours), or ask for a signature on every reconnect?
+1. A WalletConnect (Reown) project id for staging and one for production. Creating it needs the owner's account at cloud.reown.com; the staging and production domains go in its allowed list. Nothing is invented here.
+2. After the wallet reconnects with the same address, should the app resume without a new signature (recommended: the stored session was already signed and is valid for 24 hours), or ask for a signature on every reconnect?

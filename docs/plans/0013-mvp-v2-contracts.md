@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 1.15 |
+| **Version** | 1.16 |
 | **Status** | Draft — awaiting owner approval. The "Approved" status written in v1.2 was set by the agent, not by the owner, and is withdrawn. |
 | **Date Created** | 2026-11-16 |
 | **Last Updated** | 2026-11-17 |
@@ -25,6 +25,7 @@
 | 1.13 | 2026-11-17 | §12.8: testnet redeployed with the owner wallet `0x5617` as the deployer and owner (no pending ownership); the §12.7 deploy by the relayer key is superseded. The smart-contract env had a duplicate `RPC_URL` (public RPC) that was removed. |
 | 1.14 | 2026-11-17 | §13.1: Deployer row set to the owner wallet `0x5617` (the owner stated the deployer must be `0x5617`). §13.4: mainnet redeploy agenda with its blockers (Alchemy mainnet not enabled for the app, contract decisions, USDC check). `smart-contract/.env` now separates `TESTNET_*` and `MAINNET_*` addresses. |
 | 1.15 | 2026-11-17 | §13.4 A2 and A3 resolved: the owner supplied a working Alchemy mainnet URL (chain id 143 read through it) and the canonical USDC was verified on chain (name `USDC`, version `2`, 6 decimals, `DOMAIN_SEPARATOR` equals the one computed for name USDC, version 2, chain 143). |
+| 1.16 | 2026-11-17 | §12.9: the staging database was reset to match the new contracts after `createRoom` reverted with `NoLicense` (a stale equipped part from the old PartNFT). §13.4 A7: what to carry over and what to clear in the production database when v2 goes live. |
 
 > **Handoff to Claude Code.** Read `AGENTS.md` first. This plan is a **Draft**. Do not write code until the owner sets Status to Approved. When approved, implement in the order of §10. Every item marked `UNVERIFIED` must be resolved by the test or source named next to it before the code depends on it. Ask the owner about anything in §11 instead of deciding it.
 
@@ -455,6 +456,8 @@ The testnet contracts of §12.8 are the rehearsal. Mainnet needs its own deploy 
 | A5 | `CheckDeploy` with `EXPECTED_OWNER`, then the nine verifications with `chainId` 143, then the smoke test with real USDC (§13.2 step 6). | after A4 |
 | A6 | Production database backup, migration `20261117000001`, production Fly and Vercel secrets with the new addresses and chain 143, deploy from `main` after the pull request. | after A5 |
 
+| A7 | Production database at the v2 cutover. The v1 contracts have been replaced by new empty v2 contracts, so everything that points at chain state is stale (§12.9 shows the effect on staging: an equipped part without a licence made `createRoom` revert with `NoLicense`). Carry over: `players`, `ducks` (name, template, colours, status), `part_types`, `tracks` (re-synced from chain at boot). Clear: `race_ticks`, `races`, `room_players`, `rooms`, `titles`, `part_licenses`, `payments`, `auth_nonces`; reset `ducks.races`, `ducks.titles`, `ducks.best_rank` and `ducks.equipped_part_type_id`. Back up first and print the connected host and user before any write. The owner decides the carry-over list. | waiting for the owner |
+
 The addresses of the finished mainnet deploy go into `MAINNET_*` in `smart-contract/.env` and into the production secrets. The `TESTNET_*` block is never reused for mainnet.
 
 ### 12.5 Slither audit (2026-11-17)
@@ -556,3 +559,14 @@ Owner and treasury were also read from the v1 mainnet Vault and Race and match. 
 | E2E on the real deployment | PASS: replay from the on-chain seed identical 26 of 26, 0.40 MON for the relayer |
 | Art | `tokenURI` of parts 1 and 2 and tracks 1 and 2 read from chain: closed SVG with drawn shapes and an `animation_url` |
 | MockUSDC | a new one was deployed again, owned by `0x5617…`, with 1,000,000 USDC minted to it; welcome mint on |
+
+
+### 12.9 Staging database reset after the redeploy (2026-11-18)
+
+| Item | Result |
+|---|---|
+| Symptom | `createRoom` failed four times with the contract error `0xf2b920a9`, which is `NoLicense(uint256,uint16)` of `DuckWekVault` (decoded by matching the selector against every ABI error in `out/`) |
+| Cause | The duck `WekKing` of wallet `0x5617…CAE4` still had `equipped_part_type_id = 0`, set under the previous PartNFT. The new PartNFT showed 0 licences for that wallet, so the committed loadout was rejected. The Garage has no unequip action, so the owner could not fix it from the app. |
+| Reset | Backup of 9 tables first (`/tmp/staging-db-backup-20261118-030305.sql`). Deleted: `race_ticks` 267, `races` 8, `room_players` 22, `rooms` 8, `titles` 4, `part_licenses` 15, `payments` 42, `auth_nonces` 81. `ducks` (22 rows) kept, with `races`, `titles`, `best_rank` and `equipped_part_type_id` cleared. `players`, `part_types`, `tracks` kept. Identity sequences were not reset. The database user was checked to be the staging one before the write. |
+| Check | The e2e flow passed on the clean database: replay from the on-chain seed identical 31 of 31, 0.37 MON |
+| Open | The backend still sends the stored equip without checking the licence on chain. A check before the loadout is built (and a way to unequip in the Garage) is a separate change, not made. |

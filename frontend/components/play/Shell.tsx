@@ -54,7 +54,7 @@ export function BackButton({ onBack, dark }: { onBack: () => void; dark?: boolea
 }
 
 export function Header({ dark, onWallet, onBack, wide, roomCode }: { dark?: boolean; onWallet: () => void; onBack?: () => void; wide?: boolean; roomCode?: string | null }) {
-  const { me } = useSession()
+  const { me, walletState, walletAddress, openWalletModal, signOut } = useSession()
 
   return (
     <div style={wide ? { flex: 'none', gridColumn: '1 / -1', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', background: '#1E1446', borderBottom: '4px solid #000' } : { flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px 0' }}>
@@ -65,6 +65,10 @@ export function Header({ dark, onWallet, onBack, wide, roomCode }: { dark?: bool
       <div style={{ display: 'flex', alignItems: 'center', gap: wide ? 10 : 8 }}>
         {wide && roomCode && <span style={{ padding: '6px 14px', border: '3px solid #000', borderRadius: 999, background: '#FFC93C', color: '#1E1446', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{roomCode}</span>}
         <SoundButton dark={dark} />
+        {walletState === 'none' && <HeaderButton dark={dark} label="Connect wallet" onClick={openWalletModal} />}
+        {walletState === 'reconnect' && <HeaderButton dark={dark} label="Reconnect" onClick={openWalletModal} />}
+        {walletState === 'needsSignIn' && walletAddress && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 800, color: dark ? '#C9B8FF' : '#1E1446' }}>{shortenAddress(walletAddress)}</span>}
+        {walletState === 'needsSignIn' && <HeaderButton dark={dark} label="Disconnect" onClick={signOut} />}
         {me && (
           <button type="button" className="dw-btn" onClick={onWallet} aria-label="Open wallet" style={{ height: 40, display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px 0 6px', background: '#1E1446', color: '#fff', border: '3px solid #000', borderRadius: 999, boxShadow: '0 4px 0 #000' }}>
             <span style={{ width: 26, height: 26, borderRadius: '50%', background: me.duck?.bodyColor || '#FFC93C', border: '2px solid #000' }} />
@@ -73,6 +77,12 @@ export function Header({ dark, onWallet, onBack, wide, roomCode }: { dark?: bool
         )}
       </div>
     </div>
+  )
+}
+
+function HeaderButton({ label, onClick, dark }: { label: string; onClick: () => void; dark?: boolean }) {
+  return (
+    <button type="button" className="dw-btn" onClick={onClick} style={{ height: 40, padding: '0 14px', display: 'flex', alignItems: 'center', background: dark ? '#2A1D5E' : '#fff', color: dark ? '#FFC93C' : '#1E1446', border: '3px solid #000', borderRadius: 999, fontSize: 14, fontWeight: 900, whiteSpace: 'nowrap' }}>{label}</button>
   )
 }
 
@@ -118,7 +128,12 @@ export function SignSheet() {
             <Button height={54} fontSize={17} onClick={() => { sound.play('tap'); confirmSheet() }} style={{ flex: 2, border: '3px solid #000' }}>Sign</Button>
           </div>
         )}
-        {sheet.status === 'pending' && <div className="anim-blink" style={{ height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 900 }}>{sheet.pendingLabel}</div>}
+        {sheet.status === 'pending' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="anim-blink" style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 900 }}>{sheet.pendingLabel}</div>
+            <Button tone="deep" height={48} fontSize={15} shadow={false} onClick={cancelSheet} style={{ border: '3px solid #000' }}>Cancel</Button>
+          </div>
+        )}
         {sheet.status === 'done' && (
           <div className="anim-pop" style={{ textAlign: 'center', padding: '6px 0' }}>
             <div style={{ fontSize: 18, fontWeight: 900, color: '#B8F35A' }}>{sheet.doneLabel}</div>
@@ -131,7 +146,7 @@ export function SignSheet() {
 }
 
 export function WalletSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { me, signerLabel, withdraw, signOut } = useSession()
+  const { me, signerKind, signerLabel, withdraw, signOut } = useSession()
   const wide = useWide()
 
   if (!open || !me) return null
@@ -172,7 +187,7 @@ export function WalletSheet({ open, onClose }: { open: boolean; onClose: () => v
             </a>
           ))}
         </div>
-        <button type="button" onClick={() => { onClose(); signOut() }} style={{ height: 32, background: 'none', border: 'none', color: '#1E1446', fontSize: 13, fontWeight: 800, textDecoration: 'underline' }}>Sign out</button>
+        <button type="button" onClick={() => { onClose(); signOut() }} style={{ height: 32, background: 'none', border: 'none', color: '#1E1446', fontSize: 13, fontWeight: 800, textDecoration: 'underline' }}>{signerKind === 'wallet' ? 'Disconnect wallet' : 'Sign out'}</button>
       </div>
     </div>
   )

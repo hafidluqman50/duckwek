@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 1.2 |
+| **Version** | 1.3 |
 | **Status** | Draft |
 | **Date Created** | 2026-11-18 |
 | **Last Updated** | 2026-11-18 |
@@ -12,6 +12,7 @@
 | 1.0 | 2026-11-18 | Initial draft after the owner's report on staging: after disconnecting the site in MetaMask the app still looked signed in and then asked for a signature. |
 | 1.1 | 2026-11-18 | §1 P5 and P6, §2 DoD 9 and 10, §8 V8 and V9, §9: second report from the owner, MetaMask on Android: after signing in the wallet app the session is gone. WalletConnect project id missing; sign-in intent kept only in memory. |
 | 1.2 | 2026-11-18 | §1 P5 corrected: on a phone the RainbowKit MetaMask button uses the MetaMask SDK connector, not WalletConnect (RainbowKit 2.2.11, `metaMaskWallet`: `shouldUseMetaMaskConnector = isMetaMaskInjected \|\| isMobile()`), so the missing WalletConnect project id is not the cause of the Android failure. The project id stays needed for the WalletConnect option. The cause of the Android failure is OPEN. |
+| 1.3 | 2026-11-18 | §1 P7 to P9, §2 DoD 11 to 14, §3, §5, §6, §8 V10 to V13: the owner reported on a phone with native MetaMask that the sign step is forced right after connecting, the sign sheet has no way out while waiting for the wallet, and `/play` has no visible connect or disconnect control. Connect and sign are now separate steps; the header always shows a wallet control; the pending sign sheet has Cancel; the automatic sign-in and the stored sign-in intent of v1.1 are removed. |
 
 ## 1. Problem Statement
 
@@ -29,6 +30,11 @@ Findings, read from `frontend/contexts/SessionContext.tsx`, `frontend/http/clien
 | P5 | (corrected in v1.2) `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` was missing in `duckwek-stage` and now is set. It matters for the WalletConnect option and desktop QR. It does NOT affect the MetaMask button on a phone, which uses the MetaMask SDK connector. | `lib/config.ts:5`, RainbowKit `metaMaskWallet` |
 | P6 | The intent "sign in after the wallet connects" is a React ref (`wantWalletSignIn`), held in memory only. A phone browser can reload or restore the tab when it returns from the wallet app; the ref is then false and nothing signs in, so the app looks as if the sign-in vanished. UNVERIFIED. | `SessionContext.tsx` (`wantWalletSignIn`) |
 
+| P7 | Connecting a wallet opened the sign sheet automatically (`wantWalletSignIn`), so connect and sign could not be separated. | `SessionContext.tsx` (before v1.3) |
+| P8 | While the wallet was asked to sign, the sheet showed only a blinking label: no Cancel. If the wallet never answered the user was stuck. | `components/play/Shell.tsx` `SignSheet` |
+| P9 | The header had no connect or disconnect control; the wallet button existed only after sign-in. | `components/play/Shell.tsx` `Header` |
+| P10 | The phone error `-32602 invalid parameter, must provide an Ethereum address` on sign comes from the MetaMask app itself (the text exists in no dependency of the frontend). The cause is OPEN; the owner can read the console on the phone. | search of `node_modules` |
+
 P1 and P2 are why the app looked signed in. P3 is the missing reconnect option. P4 is the unnecessary signature. UNVERIFIED: which of these produced the exact prompt the owner saw; the Verification Plan resolves it with a scripted wallet test.
 
 ## 2. Definition of Done
@@ -42,6 +48,10 @@ P1 and P2 are why the app looked signed in. P3 is the missing reconnect option. 
 7. Passkey and device wallets are not affected.
 8. No contract or backend change.
 9. On Android, tap Connect in the browser, approve and sign in the MetaMask app, return to the browser: the app is signed in (survives a tab reload).
+11. Connecting a wallet never opens a signature request. After connecting without a session, a "Sign in to play" screen shows; the signature is requested only when the user taps Sign in.
+12. The header always shows a wallet control: Connect wallet, Reconnect, or the short address with Disconnect; once signed in, the balance pill whose panel has Disconnect wallet.
+13. While the wallet is asked to sign, the sheet has a Cancel button that closes it even if the wallet never answers.
+14. Reconnecting with another address does not sign automatically; it shows the Sign in screen.
 10. The WalletConnect project id comes from the environment of every deployment (staging and production); the placeholder fallback is not used.
 
 ## 3. Feature Description
@@ -128,6 +138,10 @@ flowchart TD
 | V6 | `tsc --noEmit`, lint count not higher than the baseline, `next build` | regressions |
 | V8 | On a real Android phone with MetaMask, on staging: connect, sign in the wallet app, return to the browser; also force a tab reload while in the wallet app | DoD 9, P5, P6 |
 | V9 | The WalletConnect option accepts the project id (no origin or project error in the browser console) | DoD 10 |
+| V10 | Connect shows the Sign in screen with zero signature requests | DoD 11, P7 |
+| V11 | The header control matches the wallet state in every state of §3 | DoD 12, P9 |
+| V12 | A sign request that the wallet never answers can be cancelled and signed again | DoD 13, P8 |
+| V13 | Another address after reconnecting shows Sign in, no automatic sign | DoD 14 |
 | V7 | On staging, with real MetaMask: disconnect the site in MetaMask and reload | the owner's report, UNVERIFIED P1–P4 |
 
 ## 9. Decisions for the owner

@@ -7,6 +7,7 @@ import { Button, Card, Dots, Kicker, Title, TrackThumb } from '@/components/ui/k
 import { buildTrackGeometry } from '@/lib/track'
 import { TEMPLATES, randomName, type Duck, type RoomState } from '@/lib/types'
 import { sound } from '@/lib/sound'
+import { shortenAddress } from '@/lib/config'
 
 export function Splash({ invite, onStart }: { invite: RoomState | null; onStart: () => void }) {
   return (
@@ -43,14 +44,14 @@ export function Splash({ invite, onStart }: { invite: RoomState | null; onStart:
 }
 
 export function Connect() {
-  const { connectWallet, connectPasskey, connecting } = useSession()
+  const { openWalletModal, connectPasskey, connecting } = useSession()
 
   return (
     <div className="anim-enter" style={{ position: 'absolute', inset: 0, padding: '18px 20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <Kicker>STEP 1 · CONNECT</Kicker>
       <Title>Connect to play</Title>
       <div style={{ fontSize: 14, fontWeight: 700 }}>Your duck, parts and titles live in this wallet on Monad. Already raced? Your duck comes right back.</div>
-      <Button tone="white" height={60} fontSize={18} onClick={connectWallet} style={{ justifyContent: 'flex-start' }}>
+      <Button tone="white" height={60} fontSize={18} onClick={openWalletModal} style={{ justifyContent: 'flex-start' }}>
         <span style={{ display: 'flex', gap: 4 }}>
           {[['M', '#FF9F1C'], ['R', '#7CC6FE'], ['O', '#fff'], ['W', '#C9B8FF']].map(([initial, color]) => (
             <span key={initial} style={{ width: 26, height: 26, borderRadius: 8, border: '3px solid #000', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>{initial}</span>
@@ -75,7 +76,7 @@ export function Connect() {
 }
 
 export function Reconnect() {
-  const { reconnectWallet, signOut } = useSession()
+  const { openWalletModal, signOut } = useSession()
 
   return (
     <div className="anim-enter" style={{ position: 'absolute', inset: 0, padding: '18px 20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -85,8 +86,25 @@ export function Reconnect() {
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <DuckSvg template="balanced" bodyColor="#4ED1C5" billColor="#FFC93C" cosmetics={{ hat: false, shades: false, scarf: false }} width={140} />
       </div>
-      <Button height={64} fontSize={20} onClick={reconnectWallet}>Reconnect with wallet</Button>
+      <Button height={64} fontSize={20} onClick={openWalletModal}>Reconnect with wallet</Button>
       <button type="button" onClick={signOut} style={{ height: 36, background: 'none', border: 'none', color: '#1E1446', fontSize: 14, fontWeight: 800, textDecoration: 'underline' }}>Sign out</button>
+    </div>
+  )
+}
+
+export function SignInPrompt() {
+  const { walletAddress, signInWithWallet, signOut } = useSession()
+
+  return (
+    <div className="anim-enter" style={{ position: 'absolute', inset: 0, padding: '18px 20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <Kicker>STEP 1 · SIGN IN</Kicker>
+      <Title>Sign in to play</Title>
+      <div style={{ fontSize: 14, fontWeight: 700 }}>Wallet connected{walletAddress ? ` · ${shortenAddress(walletAddress)}` : ''}. Sign once to start playing. It is free, takes no gas, and lasts 24 hours.</div>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <DuckSvg template="sprint" bodyColor="#FFC93C" billColor="#FF9F1C" cosmetics={{ hat: true, shades: false, scarf: false }} width={140} />
+      </div>
+      <Button height={64} fontSize={20} onClick={signInWithWallet}>Sign in</Button>
+      <button type="button" onClick={signOut} style={{ height: 36, background: 'none', border: 'none', color: '#1E1446', fontSize: 14, fontWeight: 800, textDecoration: 'underline' }}>Disconnect wallet</button>
     </div>
   )
 }

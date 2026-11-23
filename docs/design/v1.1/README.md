@@ -1,4 +1,4 @@
-# DuckWek v2 — Design Source
+# DuckWek v1.1 — Design Source
 
 Exported from the owner's Design canvas "DuckWek Mainnet Launch" (claude.ai, 2026-11-16). These files are the **approved visual spec** for plans `0013`, `0014`, `0015`. Tokens and rules still come from `docs/design/DESIGN_SYSTEM.md`; where a file and the design system disagree, the design system wins and the file is wrong.
 

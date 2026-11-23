@@ -2,22 +2,23 @@
 
 | | |
 |---|---|
-| **Version** | 1.0 |
+| **Version** | 1.1 |
 | **Status** | Draft — awaiting owner approval |
 | **Date Created** | 2026-11-16 |
-| **Last Updated** | 2026-11-16 |
+| **Last Updated** | 2026-11-23 |
 
 | Version | Date | Change |
 |---|---|---|
 | 1.0 | 2026-11-16 | Initial draft from the approved canvas designs and decisions D3–D11 of `0013` |
+| 1.1 | 2026-11-23 | Naming only: the release is 1.1, not v2. The reference to plan `0013` now uses its renamed file `0013-mvp-v1.1-contracts.md`, the design folder is `docs/design/v1.1/`, and "v2 contracts" reads "v1.1 contracts". |
 
-> **Handoff to Claude Code.** Read `AGENTS.md`, `docs/plans/0013-mvp-v2-contracts.md` and `docs/design/v2/README.md` first. Draft: no code until Approved. This plan **depends on `0013`** (v2 contracts: `licenseOf`, `setActive`, `setRent`, `createCreatorPart`, `createCreatorTrack`, `publishLayout`). Implement after `0013` reaches the testnet rehearsal.
+> **Handoff to Claude Code.** Read `AGENTS.md`, `docs/plans/0013-mvp-v1.1-contracts.md` and `docs/design/v1.1/README.md` first. Draft: no code until Approved. This plan **depends on `0013`** (v1.1 contracts: `licenseOf`, `setActive`, `setRent`, `createCreatorPart`, `createCreatorTrack`, `publishLayout`). Implement after `0013` reaches the testnet rehearsal.
 
 ---
 
 ## 1. Problem Statement
 
-The Garage only sells the 3 platform parts and hosts only pick from platform tracks. The v2 contracts allow creator parts, creator circuits with their own rent, discontinued parts and layout versions, but there is no UI or review flow for any of it.
+The Garage only sells the 3 platform parts and hosts only pick from platform tracks. The v1.1 contracts allow creator parts, creator circuits with their own rent, discontinued parts and layout versions, but there is no UI or review flow for any of it.
 
 ## 2. Definition of Done
 
@@ -44,7 +45,7 @@ The Garage only sells the 3 platform parts and hosts only pick from platform tra
 | `frontend/components/play/Shell.tsx` | MODIFY: nav label Market |
 | `frontend/components/market/*` | [NEW] PartsTab, CircuitsTab, PartDetail, CircuitCard, SubmitPart, ResaleTab (disabled). Reuse check: Garage list exists but has no tabs/filters/detail. |
 | `frontend/app/admin/review/page.tsx` | [NEW] review queue (allowlisted addresses) |
-| `backend/app/Chain/Indexer.ts` | [NEW] event indexer for v2 catalog. Reuse check: `RpcStats`/`Relayer` only write; no indexer exists. |
+| `backend/app/Chain/Indexer.ts` | [NEW] event indexer for v1.1 catalog. Reuse check: `RpcStats`/`Relayer` only write; no indexer exists. |
 | `backend/app/Http/Services/Catalog/*` | MODIFY: serve from index; include active, creator, slot, stats map, fit |
 | `backend/app/Http/Services/Submission/*`, `routes/submissions/api.ts`, `app/Http/Requests/*` | [NEW] create/list/approve/reject (Joi validation) |
 | `backend/database/migrations/` | [NEW] `part_submissions`, `track_submissions`; catalog tables gain `active`, `creator`, `slot`, `stats jsonb`; drop `rarity` |
@@ -67,7 +68,7 @@ export function Market(p: { tab: 'parts'|'circuits'|'resale' }): JSX.Element
 
 ## 6. UI/UX Changes (Lo-Fi)
 
-`docs/design/v2/market-*.dc.html`, `creator-submit-phone.dc.html`. Resale screen (`market-resale-laptop-q4.dc.html`) is reference for Q4 only; ship the tab as disabled.
+`docs/design/v1.1/market-*.dc.html`, `creator-submit-phone.dc.html`. Resale screen (`market-resale-laptop-q4.dc.html`) is reference for Q4 only; ship the tab as disabled.
 
 ## 7. Flowchart
 

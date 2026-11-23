@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| **Version** | 1.3 |
+| **Version** | 1.4 |
 | **Status** | Approved |
 | **Date Created** | 2026-11-16 |
-| **Last Updated** | 2026-11-16 |
+| **Last Updated** | 2026-11-23 |
 
 | Version | Date | Change |
 |---|---|---|
@@ -13,8 +13,9 @@
 | 1.1 | 2026-11-16 | Owner approved. §9 Q1–Q3, Q5 closed. §2 DoD 3/9: "Host a room" → `/play/create` (new route, same `PlayPage`, starts on `create`); copy lint uses an allowlist for denial phrases ("No prize pool", "No betting"). §4: added `app/play/create/page.tsx`, move `spriteOf` out of stage `ui.tsx`, landing contracts table reads `lib/config.ts`. §5 U1 resolved: Standard "No Charge" GSAP licence covers commercial use incl. plugins (owner pasted licence text 2026-11-16); lockfile pins the version. §8: tests are `.mjs` scripts in `frontend/__tests__/`, Playwright only for screenshots. |
 | 1.2 | 2026-11-16 | Implementation notes. §1/§3.1 landing contracts table: `lib/config.ts` had no addresses (the frontend talks to the backend only), so it now exposes `CONTRACTS` from `NEXT_PUBLIC_*_ADDRESS` env vars (documented in `.env.example`); a missing address hides its row, the header follows `NEXT_PUBLIC_CHAIN_ID`. §4: hook is `lib/useScrollStory.ts` (Impacted Files wins over the §5 path); `slotOf` lives in `lib/gridSlot.ts` (pure, testable by `node --experimental-strip-types`) instead of `MotoGrid.tsx`; `MotoGrid` draws the whole grid on one canvas (only slots in the camera window), `GridMinimap` is separate; `RacePanel` added to `RaceScreens.tsx`; `useWide` hook added. §3.2: the right panel is built for the race screen only; room info / part detail panels for home, lobby, garage are NOT built (those screens use 2 columns). §2 DoD 9 copy lint is scoped to the 0014 surfaces; existing Garage / My Duck copy ("Duck NFT", rarity) is removed by plan 0013. `/play/create` URL is kept with `history.replaceState` so the component stays mounted. The landing demo counter is labelled DEMO. |
 | 1.3 | 2026-11-17 | Verification run on the staging deployment: `next build` passes (routes `/`, `/play`, `/play/create`, `/stage`, `/stage/[code]`, `/join/[code]`); landing checked at 1440 px and at a true 390 px viewport (menu, stacked CTAs, demo lane fit, no horizontal overflow); `/play` splash unchanged on phone. Still open: 768 and 1024 px, the 200-entrant fps measurement (U3), Lighthouse, reduced motion. |
+| 1.4 | 2026-11-23 | Naming only: design folder renamed from `docs/design/v2/` to `docs/design/v1.1/` (the release is 1.1, not v2). |
 
-> **Handoff to Claude Code.** Read `AGENTS.md`, `docs/design/DESIGN_SYSTEM.md` and `docs/design/v2/README.md` first. Draft: no code until the owner sets Status to Approved. This plan is frontend only and does **not** depend on the v2 contracts (`0013`); it can ship on the current build. Copy that names contracts (addresses table on the landing) reads from `frontend/lib/config.ts`, so it switches to v2 by config.
+> **Handoff to Claude Code.** Read `AGENTS.md`, `docs/design/DESIGN_SYSTEM.md` and `docs/design/v1.1/README.md` first. Draft: no code until the owner sets Status to Approved. This plan is frontend only and does **not** depend on the v1.1 contracts (`0013`); it can ship on the current build. Copy that names contracts (addresses table on the landing) reads from `frontend/lib/config.ts`, so it switches to v1.1 by config.
 
 ---
 
@@ -27,7 +28,7 @@
 ## 2. Definition of Done
 
 1. `/` is a landing page matching `landing-desktop.dc.html` and, at ≤ 430 px, `landing-phone.dc.html`. CTAs: **Play now** → `/play`, **Host a room** → `/play` host flow.
-2. Landing motion per `docs/design/v2/README.md` (GSAP + ScrollTrigger), loaded only on `/`. `prefers-reduced-motion` shows a static page with all content.
+2. Landing motion per `docs/design/v1.1/README.md` (GSAP + ScrollTrigger), loaded only on `/`. `prefers-reduced-motion` shows a static page with all content.
 3. `/join/[code]` still redirects to `/play?room=CODE`. Old links to `/` from QR codes keep working (QR points to `/join/...`, verify).
 4. `/play` at ≥ 1024 px uses the 2-column layout of `play-laptop-race.dc.html` (sidebar nav, main, right panel with CHEER). Below 1024 px nothing changes visually.
 5. CHEER on laptop also works with the Space key while the race screen is focused (owner to confirm, Q2).
@@ -88,7 +89,7 @@ Call flow unchanged: stage/phone already receive `race:grid` and `race:countdown
 
 ## 6. UI/UX Changes (Lo-Fi)
 
-See `docs/design/v2/` files listed in DoD. Do not invent sections; do not add decorative motion to `/play` or `/stage` beyond the grid flyover (DESIGN_SYSTEM §6).
+See `docs/design/v1.1/` files listed in DoD. Do not invent sections; do not add decorative motion to `/play` or `/stage` beyond the grid flyover (DESIGN_SYSTEM §6).
 
 ## 7. Flowchart
 

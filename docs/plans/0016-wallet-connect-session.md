@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 1.4 |
+| **Version** | 1.5 |
 | **Status** | Draft |
 | **Date Created** | 2026-11-18 |
 | **Last Updated** | 2026-11-18 |
@@ -14,6 +14,7 @@
 | 1.2 | 2026-11-18 | §1 P5 corrected: on a phone the RainbowKit MetaMask button uses the MetaMask SDK connector, not WalletConnect (RainbowKit 2.2.11, `metaMaskWallet`: `shouldUseMetaMaskConnector = isMetaMaskInjected \|\| isMobile()`), so the missing WalletConnect project id is not the cause of the Android failure. The project id stays needed for the WalletConnect option. The cause of the Android failure is OPEN. |
 | 1.3 | 2026-11-18 | §1 P7 to P9, §2 DoD 11 to 14, §3, §5, §6, §8 V10 to V13: the owner reported on a phone with native MetaMask that the sign step is forced right after connecting, the sign sheet has no way out while waiting for the wallet, and `/play` has no visible connect or disconnect control. Connect and sign are now separate steps; the header always shows a wallet control; the pending sign sheet has Cancel; the automatic sign-in and the stored sign-in intent of v1.1 are removed. |
 | 1.4 | 2026-11-23 | Plan 0017 (adjustable spending limit) merged into this plan at the owner's request and 0017 deleted. §1 P11, §2 DoD 15 to 21, §3, §4, §5, §6, §7, §8 V14 to V21, §9 D3 to D5: the player sets the spending limit and the session duration (maximum 2 days); a new permit replaces the session; the backend upper bound of the limit is 100,000 USDC (owner decision); a new limit means the amount available from now on (owner decision). |
+| 1.5 | 2026-11-23 | §9 D5 confirmed by the owner: duration lower bound 1 hour, maximum 2 days, presets 1 hour, 24 hours, 2 days, default 24 hours. The owner accepted the business requirements; the plan stays Draft until the owner approves it for implementation. |
 
 ## 1. Problem Statement
 
@@ -223,4 +224,4 @@ flowchart TD
 2. After the wallet reconnects with the same address, should the app resume without a new signature (recommended: the stored session was already signed and is valid for 24 hours), or ask for a signature on every reconnect?
 3. **D3 (decided by the owner):** the upper bound of the limit on the backend is **100,000 USDC**. It is a sanity bound only; the wallet balance is the real limit. It can change later without a contract deploy.
 4. **D4 (decided by the owner):** a new limit means **the amount available from now on**, not added to what is left. Raising 5 to 10 after spending 3 gives 10 available, not 12.
-5. **D5 (duration):** the owner decided the maximum is **2 days**; the default stays 24 hours. PROPOSAL, not yet confirmed: lower bound 1 hour and presets 1 hour, 24 hours, 2 days.
+5. **D5 (decided by the owner):** duration from **1 hour** to **2 days**, presets 1 hour, 24 hours, 2 days, default 24 hours.

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 1.6 |
+| **Version** | 1.7 |
 | **Status** | Approved by the owner, 2026-11-23 ("Ya kerjakan") |
 | **Date Created** | 2026-11-18 |
 | **Last Updated** | 2026-11-23 |
@@ -16,6 +16,7 @@
 | 1.4 | 2026-11-23 | Plan 0017 (adjustable spending limit) merged into this plan at the owner's request and 0017 deleted. §1 P11, §2 DoD 15 to 21, §3, §4, §5, §6, §7, §8 V14 to V21, §9 D3 to D5: the player sets the spending limit and the session duration (maximum 2 days); a new permit replaces the session; the backend upper bound of the limit is 100,000 USDC (owner decision); a new limit means the amount available from now on (owner decision). |
 | 1.5 | 2026-11-23 | §9 D5 confirmed by the owner: duration lower bound 1 hour, maximum 2 days, presets 1 hour, 24 hours, 2 days, default 24 hours. The owner accepted the business requirements; the plan stays Draft until the owner approves it for implementation. |
 | 1.6 | 2026-11-23 | Status: the owner approved the plan for implementation ("Ya kerjakan", 2026-11-23). Scope is DoD 15 to 21 (limit and duration); nothing on chain, mainnet or production. |
+| 1.7 | 2026-11-23 | Implementation notes and verification record for DoD 15 to 21. §4: the migration column is BIGINT (like `spent`); the pickers live in `Onboarding.tsx` (`LimitPicker`) and the Change limit sheet in `Shell.tsx`; passkey and device sign-in keep the defaults (5 USDC, 24 hours) and change them from the wallet panel. §6: the wallet panel shows when the session ends instead of the time left (a pure render, no clock in render); an order refused by the limit shows the toast and opens the Change limit sheet directly instead of a toast with a button. §8 V17 corrected: the token allowance after the order is cap minus spent, not the cap. V14 to V18 and V20 passed on staging; V19 (browser test of the pickers) was not run, see §10. |
 
 ## 1. Problem Statement
 
@@ -226,3 +227,17 @@ flowchart TD
 3. **D3 (decided by the owner):** the upper bound of the limit on the backend is **100,000 USDC**. It is a sanity bound only; the wallet balance is the real limit. It can change later without a contract deploy.
 4. **D4 (decided by the owner):** a new limit means **the amount available from now on**, not added to what is left. Raising 5 to 10 after spending 3 gives 10 available, not 12.
 5. **D5 (decided by the owner):** duration from **1 hour** to **2 days**, presets 1 hour, 24 hours, 2 days, default 24 hours.
+
+## 10. Verification record (2026-11-23, staging)
+
+| # | Result |
+|---|---|
+| V14 | Passed: `test/e2e/limit.e2e.ts` against `duckwek-stage-api`: the permit carries the chosen limit and a deadline of now plus the chosen duration; the token lifetime follows the deadline. |
+| V15 | Passed: a 2 USDC limit allowed two 1 USDC orders and refused the third with "Session spending limit reached". |
+| V16 | Passed: after a new permit with 10 USDC, `Vault.sessionCap` read 10000000, `sessionSpent` held only the new order, `sessionEnd` equalled the new deadline. |
+| V17 | Passed: after a permit with 1 USDC the vault cap read 1000000 and the token allowance read 0 (cap minus spent). |
+| V18 | Passed offline (`test/session/limit.test.ts`) and on staging (limit 0, 0.5, above 100,000, text; duration under 1 hour, above 2 days: all 400). |
+| V20 | Passed: `/api/me` returns `session { limit, spent, deadline }`; migration `20261123000001` applied on the staging database. |
+| V21 | Done: listed in plan 0013 §13.4 A6. |
+| V19 | NOT RUN. The scripted-wallet browser tooling from the earlier session no longer exists on this machine. The screens compile (`tsc`, `next build`, lint at its baseline of 14 errors) and are deployed to `duckwek-stage`, but nobody has operated them in a browser. |
+| Regression | `flow.e2e.ts` passed on staging (default sign-in path, create, joins, race, replay identical). |

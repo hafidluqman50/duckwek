@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| **Version** | 1.5 |
-| **Status** | Draft |
+| **Version** | 1.6 |
+| **Status** | Approved by the owner, 2026-11-23 ("Ya kerjakan") |
 | **Date Created** | 2026-11-18 |
-| **Last Updated** | 2026-11-18 |
+| **Last Updated** | 2026-11-23 |
 
 | Version | Date | Change |
 |---|---|---|
@@ -15,6 +15,7 @@
 | 1.3 | 2026-11-18 | §1 P7 to P9, §2 DoD 11 to 14, §3, §5, §6, §8 V10 to V13: the owner reported on a phone with native MetaMask that the sign step is forced right after connecting, the sign sheet has no way out while waiting for the wallet, and `/play` has no visible connect or disconnect control. Connect and sign are now separate steps; the header always shows a wallet control; the pending sign sheet has Cancel; the automatic sign-in and the stored sign-in intent of v1.1 are removed. |
 | 1.4 | 2026-11-23 | Plan 0017 (adjustable spending limit) merged into this plan at the owner's request and 0017 deleted. §1 P11, §2 DoD 15 to 21, §3, §4, §5, §6, §7, §8 V14 to V21, §9 D3 to D5: the player sets the spending limit and the session duration (maximum 2 days); a new permit replaces the session; the backend upper bound of the limit is 100,000 USDC (owner decision); a new limit means the amount available from now on (owner decision). |
 | 1.5 | 2026-11-23 | §9 D5 confirmed by the owner: duration lower bound 1 hour, maximum 2 days, presets 1 hour, 24 hours, 2 days, default 24 hours. The owner accepted the business requirements; the plan stays Draft until the owner approves it for implementation. |
+| 1.6 | 2026-11-23 | Status: the owner approved the plan for implementation ("Ya kerjakan", 2026-11-23). Scope is DoD 15 to 21 (limit and duration); nothing on chain, mainnet or production. |
 
 ## 1. Problem Statement
 

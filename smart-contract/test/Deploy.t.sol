@@ -2,24 +2,24 @@
 pragma solidity 0.8.26;
 
 import {Test} from "forge-std/Test.sol";
-import {DeployV2Script} from "../script/DeployV2.s.sol";
+import {DeployScript} from "../script/Deploy.s.sol";
 import {CheckDeployScript} from "../script/CheckDeploy.s.sol";
 import {DuckWekVault} from "../src/DuckWekVault.sol";
 import {PartNFT} from "../src/PartNFT.sol";
 
-contract DeployV2Test is Test {
+contract DeployTest is Test {
     address deployer;
     address operator = address(0x0E);
     address treasury = address(0x7E);
 
-    function _deploy(address finalOwner) internal returns (DeployV2Script.Deployed memory deployed) {
+    function _deploy(address finalOwner) internal returns (DeployScript.Deployed memory deployed) {
         uint256 key = 0xDE91;
         deployer = vm.addr(key);
         vm.setEnv("PRIVATE_KEY", vm.toString(bytes32(key)));
         vm.setEnv("OPERATOR", vm.toString(operator));
         vm.setEnv("TREASURY", vm.toString(treasury));
         vm.setEnv("FINAL_OWNER", vm.toString(finalOwner));
-        deployed = new DeployV2Script().run();
+        deployed = new DeployScript().run();
         vm.setEnv("VAULT", vm.toString(address(deployed.vault)));
         vm.setEnv("RACE", vm.toString(address(deployed.race)));
         vm.setEnv("PART_NFT", vm.toString(address(deployed.parts)));
@@ -30,7 +30,7 @@ contract DeployV2Test is Test {
     }
 
     function test_run_deployAndCheckScenarios() public {
-        DeployV2Script.Deployed memory deployed = _deploy(address(0));
+        DeployScript.Deployed memory deployed = _deploy(address(0));
         new CheckDeployScript().run();
 
         vm.prank(deployer);
@@ -56,7 +56,7 @@ contract DeployV2Test is Test {
     }
 
     function test_run_freshDeployServesFullOrderFlow() public {
-        DeployV2Script.Deployed memory deployed = _deploy(address(0));
+        DeployScript.Deployed memory deployed = _deploy(address(0));
         uint256 playerKey = 0xBEEF;
         address player = vm.addr(playerKey);
         uint256 deadline = block.timestamp + 1 days;

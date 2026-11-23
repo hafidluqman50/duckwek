@@ -6,7 +6,7 @@ import {DuckWekVault} from "../src/DuckWekVault.sol";
 import {PartNFT} from "../src/PartNFT.sol";
 import {MockUSDC} from "../src/mocks/MockUSDC.sol";
 
-contract SmokeV2Script is Script {
+contract SmokeScript is Script {
     function run() external {
         uint256 key = vm.envUint("PRIVATE_KEY");
         address player = vm.addr(key);

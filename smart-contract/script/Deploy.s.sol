@@ -12,7 +12,7 @@ import {PartRenderer} from "../src/render/PartRenderer.sol";
 import {TrackRenderer} from "../src/render/TrackRenderer.sol";
 import {BadgeRenderer} from "../src/render/BadgeRenderer.sol";
 
-contract DeployV2Script is Script {
+contract DeployScript is Script {
     uint96 constant ONE_USDC = 1_000_000;
 
     bytes constant KALI = hex"0f4c3d4c3d4c3d";

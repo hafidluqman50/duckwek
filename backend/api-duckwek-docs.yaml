@@ -22,8 +22,8 @@ paths:
   /api/auth/nonce:
     post:
       tags: [Auth]
-      summary: The session permit (EIP-712 typed data) the wallet signs once; cap and expiry are set by the server
-      requestBody: { content: { application/json: { schema: { type: object, properties: { address: { type: string } } } } } }
+      summary: The session permit (EIP-712 typed data) the wallet signs once; the cap (USDC base units, 1 to 100000 USDC) and the duration (seconds, 1 hour to 2 days) are chosen by the player, defaults 5 USDC and 24 hours
+      requestBody: { content: { application/json: { schema: { type: object, properties: { address: { type: string }, limit: { type: string, example: '10000000' }, duration: { type: integer, example: 86400 } } } } } }
       responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Envelope' } } } } }
   /api/auth/verify:
     post:
@@ -35,7 +35,7 @@ paths:
     get:
       tags: [Profile]
       security: [{ bearer: [] }]
-      summary: Duck profile, USDC balance, vault earnings, owned parts, titles, activity
+      summary: Duck profile, USDC balance, vault earnings, session (limit, spent, deadline), owned parts, titles, activity
       responses: { '200': { description: OK } }
   /api/me/duck:
     put:

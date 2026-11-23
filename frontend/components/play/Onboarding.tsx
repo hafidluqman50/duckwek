@@ -7,7 +7,7 @@ import { Button, Card, Dots, Kicker, Title, TrackThumb } from '@/components/ui/k
 import { buildTrackGeometry } from '@/lib/track'
 import { TEMPLATES, randomName, type Duck, type RoomState } from '@/lib/types'
 import { sound } from '@/lib/sound'
-import { shortenAddress } from '@/lib/config'
+import { shortenAddress, formatUsdc, parseUsdcAmount, isValidSessionTerms, DEFAULT_SESSION_TERMS, LIMIT_PRESETS, DURATION_PRESETS, SESSION_LIMIT_MINIMUM, SESSION_LIMIT_MAXIMUM, USDC_UNIT, type SessionTerms } from '@/lib/config'
 
 export function Splash({ invite, onStart }: { invite: RoomState | null; onStart: () => void }) {
   return (
@@ -92,18 +92,64 @@ export function Reconnect() {
   )
 }
 
+const chipStyle = (selected: boolean) => ({ height: 40, minWidth: 52, padding: '0 12px', border: '3px solid #000', borderRadius: 12, background: selected ? '#FFC93C' : '#fff', color: '#1E1446', fontSize: 15, fontWeight: 900 })
+
+export function LimitPicker({ terms, onChange }: { terms: SessionTerms; onChange: (terms: SessionTerms) => void }) {
+  const [customText, setCustomText] = useState('')
+  const limitIsPreset = LIMIT_PRESETS.includes(terms.limit) && customText === ''
+  const limitInvalid = terms.limit < SESSION_LIMIT_MINIMUM || terms.limit > SESSION_LIMIT_MAXIMUM
+
+  const chooseLimit = (limit: bigint) => {
+    setCustomText('')
+    onChange({ ...terms, limit })
+  }
+
+  const typeLimit = (text: string) => {
+    setCustomText(text)
+    onChange({ ...terms, limit: parseUsdcAmount(text) ?? BigInt(0) })
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 1.5 }}>SPENDING LIMIT (USDC)</div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {LIMIT_PRESETS.map((limit) => (
+          <button key={limit.toString()} type="button" aria-pressed={limitIsPreset && terms.limit === limit} onClick={() => chooseLimit(limit)} style={chipStyle(limitIsPreset && terms.limit === limit)}>{(limit / USDC_UNIT).toString()}</button>
+        ))}
+        <input
+          inputMode="decimal"
+          aria-label="Other spending limit in USDC"
+          placeholder="Other"
+          value={customText}
+          onChange={(event) => typeLimit(event.target.value)}
+          style={{ ...chipStyle(customText !== ''), width: 84, background: customText !== '' ? '#FFF3C4' : '#fff', fontWeight: 800 }}
+        />
+      </div>
+      {limitInvalid && <div style={{ fontSize: 12, fontWeight: 800, color: '#C62828' }}>Pick a limit from {formatUsdc(SESSION_LIMIT_MINIMUM)} to {Number(SESSION_LIMIT_MAXIMUM / USDC_UNIT).toLocaleString('en-US')} USDC.</div>}
+      <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 1.5 }}>SESSION TIME</div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        {DURATION_PRESETS.map((preset) => (
+          <button key={preset.seconds} type="button" aria-pressed={terms.duration === preset.seconds} onClick={() => onChange({ ...terms, duration: preset.seconds })} style={chipStyle(terms.duration === preset.seconds)}>{preset.label}</button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function SignInPrompt() {
   const { walletAddress, signInWithWallet, signOut } = useSession()
+  const [terms, setTerms] = useState<SessionTerms>(DEFAULT_SESSION_TERMS)
 
   return (
     <div className="anim-enter" style={{ position: 'absolute', inset: 0, padding: '18px 20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <Kicker>STEP 1 · SIGN IN</Kicker>
       <Title>Sign in to play</Title>
-      <div style={{ fontSize: 14, fontWeight: 700 }}>Wallet connected{walletAddress ? ` · ${shortenAddress(walletAddress)}` : ''}. Sign once to start playing. It is free, takes no gas, and lasts 24 hours.</div>
+      <div style={{ fontSize: 14, fontWeight: 700 }}>Wallet connected{walletAddress ? ` · ${shortenAddress(walletAddress)}` : ''}. Sign once to start playing. It is free and takes no gas. You choose how much DuckWek may spend and for how long.</div>
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <DuckSvg template="sprint" bodyColor="#FFC93C" billColor="#FF9F1C" cosmetics={{ hat: true, shades: false, scarf: false }} width={140} />
       </div>
-      <Button height={64} fontSize={20} onClick={signInWithWallet}>Sign in</Button>
+      <LimitPicker terms={terms} onChange={setTerms} />
+      <Button height={64} fontSize={20} disabled={!isValidSessionTerms(terms)} onClick={() => signInWithWallet(terms)}>Sign in</Button>
       <button type="button" onClick={signOut} style={{ height: 36, background: 'none', border: 'none', color: '#1E1446', fontSize: 14, fontWeight: 800, textDecoration: 'underline' }}>Disconnect wallet</button>
     </div>
   )

@@ -72,7 +72,7 @@ export class OrderService {
 
     if (!session || !session.signature || session.deadline === null) throw new UnauthorizedException('Session ended, connect again')
 
-    if (BigInt(session.spent) + price > env.sessionCap) throw new UnauthorizedException('Session spending limit reached, connect again')
+    if (BigInt(session.spent) + price > BigInt(session.session_cap)) throw new UnauthorizedException('Session spending limit reached')
 
     return session
   }
@@ -90,7 +90,7 @@ export class OrderService {
   }
 
   private permitOf(session: AuthNonce) {
-    return session.permit_used ? NO_PERMIT : toPermitArg(env.sessionCap, BigInt(session.deadline!), session.signature as Hex)
+    return session.permit_used ? NO_PERMIT : toPermitArg(BigInt(session.session_cap), BigInt(session.deadline!), session.signature as Hex)
   }
 
   private async record(orderInput: OrderCreateDTO, order: OrderArg, session: AuthNonce, roomCode: string | null, label: string) {

@@ -12,6 +12,7 @@ class AuthNonce extends Model<InferAttributes<AuthNonce>, InferCreationAttribute
   declare signature: string | null
   declare permit_used: CreationOptional<boolean>
   declare spent: CreationOptional<string>
+  declare session_cap: CreationOptional<string>
   declare created_at: CreationOptional<Date>
   declare updated_at: CreationOptional<Date>
 }
@@ -28,6 +29,7 @@ AuthNonce.init(
     signature: { type: DataTypes.TEXT, allowNull: true },
     permit_used: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     spent: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
+    session_cap: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 5_000_000 },
     created_at: DataTypes.DATE,
     updated_at: DataTypes.DATE,
   },

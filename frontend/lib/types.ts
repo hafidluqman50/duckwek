@@ -25,6 +25,7 @@ export interface Me {
   duck: Duck | null
   usdc: string
   earnings: string
+  session: { limit: string; spent: string; deadline: string } | null
   parts: number[]
   licenses?: { typeId: number; tokenId: string; tx: string }[]
   titles: { title: string; rank: number; room: string; raceId: string; tx: string | null }[]

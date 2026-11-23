@@ -13,6 +13,10 @@ deployment and spend test funds.
   — average finishing place of a tapper and an idler. Other env vars: `TAP_FROM`, `TAPS`.
 - `npm run test:balance` points at `test/engine/search.script.ts`, which is not in the repo.
 
+## Session limit and duration (offline)
+
+- `npx ts-node -T -r tsconfig-paths/register test/session/limit.test.ts` — bounds and defaults of the sign-in limit and duration.
+
 ## ABI drift (offline)
 
 - `npx ts-node -T -r tsconfig-paths/register test/e2e/abi.check.ts`
@@ -24,6 +28,7 @@ deployment and spend test funds.
 - `API_URL=… RPC_URL=… npx ts-node -T -r tsconfig-paths/register test/e2e/cheer.e2e.ts`
 - `API_URL=… npx ts-node -T -r tsconfig-paths/register test/e2e/cadence.e2e.ts`. Optional: `LAG`, `EXTRAP`, `TRACK`,
   `TRACE_OUT`, `TRACE_IN`.
+- `VAULT=0x… MOCK_USDC=0x… API_URL=… RPC_URL=… npx ts-node -T -r tsconfig-paths/register test/e2e/limit.e2e.ts` — sign-in limit and duration on a real deployment: bounds, permit values, raise and lower replace the session (new wallet, spends about 4 USDC of the welcome balance).
 - `CREATOR_KEY=0x… TRACK_ID=3 VAULT=0x… MOCK_USDC=0x… API_URL=… RPC_URL=… npx ts-node -T -r tsconfig-paths/register test/e2e/withdraw.e2e.ts`
 - `DOTENV_CONFIG_PATH=.env.staging npx ts-node -T -r tsconfig-paths/register test/e2e/catalog.sync.ts` reads the catalog
   from the chain into the database the env points at.

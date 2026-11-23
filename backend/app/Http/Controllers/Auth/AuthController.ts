@@ -11,7 +11,12 @@ export class AuthController extends BaseController {
 
   public async nonce(request: Request, response: Response): Promise<void> {
     try {
-      const nonceInput = new AuthNonceRequest({ address: String(request.body.address || '') }).toDTO()
+      const { limit, duration } = request.body
+      const nonceInput = new AuthNonceRequest({
+        address: String(request.body.address || ''),
+        ...(limit === undefined ? {} : { limit: String(limit) }),
+        ...(duration === undefined ? {} : { duration: duration }),
+      }).toDTO()
 
       this.ok(response, 'Sign this message to sign in', await this.authService.nonce(nonceInput))
     } catch (error) {

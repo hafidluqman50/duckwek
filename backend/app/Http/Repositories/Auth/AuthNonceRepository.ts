@@ -2,7 +2,7 @@ import { Op } from 'sequelize'
 import { AuthNonce } from '@Models/AuthNonce'
 
 export class AuthNonceRepository {
-  public async create(address: string, nonce: string, ttlMs: number, permit: { permit_nonce: string; deadline: string }): Promise<AuthNonce> {
+  public async create(address: string, nonce: string, ttlMs: number, permit: { permit_nonce: string; deadline: string; session_cap: string }): Promise<AuthNonce> {
     return AuthNonce.create({ address, nonce, expires_at: new Date(Date.now() + ttlMs), ...permit } as any)
   }
 

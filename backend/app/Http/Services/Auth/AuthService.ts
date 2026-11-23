@@ -17,17 +17,17 @@ export class AuthService {
     public authNonceRepository: AuthNonceRepository,
   ) {}
 
-  private message(owner: string, permitNonce: bigint, deadline: bigint) {
-    return { owner: owner as Address, spender: addresses.vault, value: env.sessionCap, nonce: permitNonce, deadline }
+  private message(owner: string, permitNonce: bigint, deadline: bigint, sessionCap: bigint) {
+    return { owner: owner as Address, spender: addresses.vault, value: sessionCap, nonce: permitNonce, deadline }
   }
 
   public async nonce(nonceInput: AuthNonceDTO): Promise<{ session: unknown }> {
     const permitNonce = (await publicClient.readContract({ address: addresses.usdc, abi: usdcAbi, functionName: 'nonces', args: [nonceInput.address as Address] })) as bigint
-    const deadline = BigInt(Math.floor(Date.now() / 1000) + env.sessionTtlSec)
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + nonceInput.duration)
 
-    await this.authNonceRepository.create(nonceInput.address, crypto.randomBytes(12).toString('hex'), 10 * 60_000, { permit_nonce: permitNonce.toString(), deadline: deadline.toString() })
+    await this.authNonceRepository.create(nonceInput.address, crypto.randomBytes(12).toString('hex'), 10 * 60_000, { permit_nonce: permitNonce.toString(), deadline: deadline.toString(), session_cap: nonceInput.limit.toString() })
 
-    return { session: jsonify({ domain: usdcDomain(), types: permitTypes, primaryType: 'Permit', message: this.message(nonceInput.address, permitNonce, deadline) }) }
+    return { session: jsonify({ domain: usdcDomain(), types: permitTypes, primaryType: 'Permit', message: this.message(nonceInput.address, permitNonce, deadline, nonceInput.limit) }) }
   }
 
   public async verify(verifyInput: AuthVerifyDTO) {
@@ -40,7 +40,7 @@ export class AuthService {
       domain: usdcDomain(),
       types: permitTypes,
       primaryType: 'Permit',
-      message: this.message(verifyInput.address, BigInt(authNonce.permit_nonce), BigInt(authNonce.deadline)),
+      message: this.message(verifyInput.address, BigInt(authNonce.permit_nonce), BigInt(authNonce.deadline), BigInt(authNonce.session_cap)),
       signature: verifyInput.signature as Hex,
     }).catch(() => false)
 
@@ -48,7 +48,8 @@ export class AuthService {
 
     await this.authNonceRepository.startSession(authNonce, verifyInput.signature)
     const { created } = await this.playerRepository.findOrCreate(verifyInput.address)
-    const token = jwt.sign({ address: verifyInput.address }, env.jwtSecret, { expiresIn: env.sessionTtlSec })
+    const secondsLeft = Math.max(1, Number(authNonce.deadline) - Math.floor(Date.now() / 1000))
+    const token = jwt.sign({ address: verifyInput.address }, env.jwtSecret, { expiresIn: secondsLeft })
 
     return { token, address: verifyInput.address, isNew: created }
   }

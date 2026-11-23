@@ -30,8 +30,8 @@ export const revive = (typedData: any) =>
     ['value', 'nonce', 'deadline', 'amount'].includes(key) && typeof value === 'string' && /^\d+$/.test(value) ? BigInt(value) : value,
   )
 
-export async function signIn(account: PrivateKeyAccount): Promise<string> {
-  const { session } = await call('/api/auth/nonce', 'POST', { address: account.address })
+export async function signIn(account: PrivateKeyAccount, terms?: { limit: bigint; duration: number }): Promise<string> {
+  const { session } = await call('/api/auth/nonce', 'POST', terms ? { address: account.address, limit: terms.limit.toString(), duration: terms.duration } : { address: account.address })
   const typedData = revive(session)
   const signature = await account.signTypedData({ domain: typedData.domain, types: typedData.types, primaryType: typedData.primaryType, message: typedData.message })
 

@@ -7,6 +7,39 @@ export const APP_URL = process.env.NEXT_PUBLIC_APP_URL || ''
 
 export const explorerTransactionUrl = (hash?: string | null) => (hash ? `${EXPLORER_URL.replace(/\/$/, '')}/tx/${hash}` : '#')
 export const formatUsdc = (value: string | number | bigint | null | undefined) => (Number(value || 0) / 1e6).toFixed(2)
+export interface SessionTerms {
+  limit: bigint
+  duration: number
+}
+
+export const USDC_UNIT = BigInt(1_000_000)
+export const SESSION_LIMIT_MINIMUM = BigInt(1) * USDC_UNIT
+export const SESSION_LIMIT_MAXIMUM = BigInt(100_000) * USDC_UNIT
+export const SESSION_DURATION_MINIMUM_SECONDS = 3600
+export const SESSION_DURATION_MAXIMUM_SECONDS = 2 * 24 * 3600
+export const DEFAULT_SESSION_TERMS: SessionTerms = { limit: BigInt(5) * USDC_UNIT, duration: 24 * 3600 }
+export const LIMIT_PRESETS = [5, 10, 25, 50].map((amount) => BigInt(amount) * USDC_UNIT)
+export const DURATION_PRESETS: { seconds: number; label: string }[] = [{ seconds: 3600, label: '1 h' }, { seconds: 24 * 3600, label: '24 h' }, { seconds: 2 * 24 * 3600, label: '2 d' }]
+
+export const isValidSessionTerms = (terms: SessionTerms) =>
+  terms.limit >= SESSION_LIMIT_MINIMUM && terms.limit <= SESSION_LIMIT_MAXIMUM && terms.duration >= SESSION_DURATION_MINIMUM_SECONDS && terms.duration <= SESSION_DURATION_MAXIMUM_SECONDS
+
+export const parseUsdcAmount = (text: string): bigint | null => {
+  const match = /^(\d+)(?:\.(\d{1,6}))?$/.exec(text.trim())
+
+  if (!match) return null
+
+  return BigInt(match[1]) * USDC_UNIT + BigInt((match[2] ?? '').padEnd(6, '0') || '0')
+}
+
+export const formatDuration = (seconds: number) => {
+  if (seconds >= 2 * 24 * 3600) return `${Math.round(seconds / 86400)} days`
+
+  if (seconds >= 3600) return `${Math.floor(seconds / 3600)} h`
+
+  return `${Math.max(1, Math.floor(seconds / 60))} min`
+}
+
 export const shortenAddress = (address?: string | null) => (address ? `${address.slice(0, 6)}…${address.slice(-4)}` : '')
 
 export const CONTRACTS: { name: string; address: string }[] = [

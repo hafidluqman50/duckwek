@@ -8,7 +8,7 @@ import { saveDuck } from '@/http/profile/profileApi'
 import { startRace } from '@/http/rooms/roomsApi'
 import { sound } from '@/lib/sound'
 import { randomDuck, type Duck } from '@/lib/types'
-import { Header, Toast, SignSheet, WalletSheet, BottomNav } from '@/components/play/Shell'
+import { Header, Toast, SignSheet, LimitSheet, WalletSheet, BottomNav } from '@/components/play/Shell'
 import { Splash, Connect, Reconnect, SignInPrompt, JoinTicket, Hatch } from '@/components/play/Onboarding'
 import { Home, MyDuck, Garage, CreateRoom, Hosted } from '@/components/play/Profile'
 import { Lobby, Countdown, RaceView, RacePanel, PhotoFinish, Result } from '@/components/play/RaceScreens'
@@ -264,6 +264,7 @@ export function PlayPage({ entry }: { entry?: 'create' } = {}) {
         {racePanel && live.grid && <RacePanel grid={live.grid} tick={live.tick} myAddress={address} />}
         <Toast />
         <SignSheet />
+        <LimitSheet />
         <WalletSheet open={walletOpen} onClose={() => setWalletOpen(false)} />
       </main>
     )
@@ -277,6 +278,7 @@ export function PlayPage({ entry }: { entry?: 'create' } = {}) {
         {navScreen && <BottomNav current={navScreen} navigate={(target) => setScreen(target)} />}
         <Toast />
         <SignSheet />
+        <LimitSheet />
         <WalletSheet open={walletOpen} onClose={() => setWalletOpen(false)} />
       </div>
     </main>

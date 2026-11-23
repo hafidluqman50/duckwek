@@ -2,6 +2,7 @@ import { addresses, publicClient } from '@Chain/Contracts'
 import { usdcAbi, vaultAbi } from '@Chain/abis'
 import { env } from '@config/env'
 import { PlayerRepository } from '@Repositories/Auth/PlayerRepository'
+import { AuthNonceRepository } from '@Repositories/Auth/AuthNonceRepository'
 import type { Address } from 'viem'
 import { DuckRepository } from '@Repositories/Duck/DuckRepository'
 import { PaymentRepository } from '@Repositories/Payment/PaymentRepository'
@@ -43,6 +44,7 @@ export class ProfileService {
     public paymentRepository: PaymentRepository,
     public catalogRepository: CatalogRepository,
     public playerRepository: PlayerRepository,
+    public authNonceRepository: AuthNonceRepository,
   ) {}
 
   private async balances(address: string): Promise<{ usdc: bigint; earnings: bigint }> {
@@ -58,12 +60,13 @@ export class ProfileService {
   }
 
   public async me(address: string) {
-    const [duck, licenses, titles, activity, money] = await Promise.all([
+    const [duck, licenses, titles, activity, money, session] = await Promise.all([
       this.duckRepository.byAddress(address),
       this.duckRepository.licenses(address),
       this.duckRepository.titles(address),
       this.paymentRepository.activity(address),
       this.balances(address),
+      this.authNonceRepository.activeSession(address),
     ])
 
     return {
@@ -71,6 +74,7 @@ export class ProfileService {
       duck: duck ? toPublicDuck(duck) : null,
       usdc: money.usdc.toString(),
       earnings: money.earnings.toString(),
+      session: session ? { limit: String(session.session_cap), spent: String(session.spent), deadline: String(session.deadline) } : null,
       parts: [...new Set(licenses.map((license) => license.type_id))],
       licenses: licenses.map((license) => ({ typeId: license.type_id, tokenId: license.token_id, tx: license.tx_hash })),
       titles: titles.map((title) => ({ title: title.title, rank: title.rank, room: title.room_code, raceId: title.race_id, tx: title.tx_hash })),

@@ -14,7 +14,7 @@ import { createOrder, type OrderBody, type OrderResult } from '@/http/orders/ord
 import { openPasskeyWallet, deviceWallet } from '@/lib/passkey'
 import { appChain } from '@/lib/wagmi'
 import { sound } from '@/lib/sound'
-import { formatUsdc } from '@/lib/config'
+import { formatUsdc, formatDuration, DEFAULT_SESSION_TERMS, type SessionTerms } from '@/lib/config'
 import type { Me, Part, Track } from '@/lib/types'
 
 type SignerKind = 'wallet' | 'passkey' | 'device'
@@ -53,7 +53,11 @@ interface SessionState {
   say: (text: string, milliseconds?: number) => void
   refresh: () => Promise<Me | null>
   openWalletModal: () => void
-  signInWithWallet: () => void
+  signInWithWallet: (terms: SessionTerms) => void
+  changeLimit: (terms: SessionTerms) => Promise<void>
+  limitSheetOpen: boolean
+  openLimitSheet: () => void
+  closeLimitSheet: () => void
   connectPasskey: () => Promise<boolean>
   pay: (body: OrderBody) => Promise<OrderResult | { alreadyIn: true; roomCode: string | null } | null>
   withdraw: () => Promise<void>
@@ -92,6 +96,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [sheet, setSheet] = useState<Sheet | null>(null)
   const [toast, setToast] = useState('')
   const [connecting, setConnecting] = useState<string | null>(null)
+  const [limitSheetOpen, setLimitSheetOpen] = useState(false)
   const [storedSignerKind, setStoredSignerKind] = useState<SignerKind | null>(null)
   const [walletSettleExpired, setWalletSettleExpired] = useState(false)
   const sheetDecision = useRef<{ confirm: () => void; reject: (error: Error) => void } | null>(null)
@@ -185,8 +190,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const sheetStatus = (patch: Partial<Sheet>) => setSheet((current) => (current ? { ...current, ...patch } : current))
 
-  const signIn = useCallback(async (signingSigner: Signer, reviewFirst = true) => {
-    const sheetContent = { title: 'Sign in to DuckWek', rows: [{ label: 'Signature', value: 'One signature, valid 24 h' }, { label: 'Spending limit', value: 'Up to 5 USDC · DuckWek only' }, { label: 'Network fee', value: '0 · sponsored' }], pendingLabel: 'Signing you in…', doneLabel: 'Signed in', walletLabel: signingSigner.label }
+  const signIn = useCallback(async (signingSigner: Signer, reviewFirst = true, terms: SessionTerms = DEFAULT_SESSION_TERMS) => {
+    const sheetContent = { title: 'Sign in to DuckWek', rows: [{ label: 'Signature', value: `One signature, valid ${formatDuration(terms.duration)}` }, { label: 'Spending limit', value: `Up to ${formatUsdc(terms.limit)} USDC · DuckWek only` }, { label: 'Network fee', value: '0 · sponsored' }], pendingLabel: 'Signing you in…', doneLabel: 'Signed in', walletLabel: signingSigner.label }
 
     if (reviewFirst) await askSheet(sheetContent)
     else setSheet({ ...sheetContent, status: 'pending' })
@@ -194,7 +199,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     sheetStatus({ status: 'pending' })
 
     try {
-      const { session } = await fetchNonce(signingSigner.address)
+      const { session } = await fetchNonce(signingSigner.address, terms.limit, terms.duration)
       const cancelled = new Promise<never>((_, reject) => { signCancel.current = () => reject(new Error('cancelled')) })
       const signature = await Promise.race([signingSigner.signTypedData(session), cancelled])
       const verification = await verifySignature(signingSigner.address, signature)
@@ -242,7 +247,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     openConnectModal?.()
   }, [openConnectModal])
 
-  const signInWithWallet = useCallback(() => {
+  const signInWithWallet = useCallback((terms: SessionTerms) => {
     sound.unlock()
 
     if (account.status !== 'connected' || !account.address) {
@@ -251,8 +256,22 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    signIn(walletSigner(account.address, account.connector?.name || 'Wallet'), false).catch(() => undefined)
+    signIn(walletSigner(account.address, account.connector?.name || 'Wallet'), false, terms).catch(() => undefined)
   }, [account.status, account.address, account.connector, openConnectModal, signIn, walletSigner])
+
+  const openLimitSheet = useCallback(() => setLimitSheetOpen(true), [])
+  const closeLimitSheet = useCallback(() => setLimitSheetOpen(false), [])
+
+  const changeLimit = useCallback(async (terms: SessionTerms) => {
+    if (!signer) {
+      say('Connect first')
+
+      return
+    }
+
+    setLimitSheetOpen(false)
+    await signIn(signer, signer.kind !== 'wallet', terms).catch(() => undefined)
+  }, [signer, signIn, say])
 
   const connectPasskey = useCallback(async () => {
     sound.unlock()
@@ -296,7 +315,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       return order
     } catch (error) {
       sound.play('error')
-      say((error as Error).message, 3000)
+
+      if ((error as Error).message.startsWith('Session spending limit reached')) {
+        say('Spending limit reached', 3000)
+        setLimitSheetOpen(true)
+      } else {
+        say((error as Error).message, 3000)
+      }
 
       if (error instanceof ApiError && error.status === 401) {
         tokenStore.set(null)
@@ -390,8 +415,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     signerKind: signer?.kind || null,
     signerLabel: signer?.label || '',
     me: visibleMe, tracks, parts, sheet, toast, connecting,
-    say, refresh, openWalletModal, signInWithWallet, connectPasskey, pay, withdraw, confirmSheet, cancelSheet, signOut,
-  }), [ready, walletState, account.status, account.address, signer, visibleMe, tracks, parts, sheet, toast, connecting, say, refresh, openWalletModal, signInWithWallet, connectPasskey, pay, withdraw, confirmSheet, cancelSheet, signOut])
+    limitSheetOpen, openLimitSheet, closeLimitSheet,
+    say, refresh, openWalletModal, signInWithWallet, changeLimit, connectPasskey, pay, withdraw, confirmSheet, cancelSheet, signOut,
+  }), [ready, walletState, account.status, account.address, signer, visibleMe, tracks, parts, sheet, toast, connecting, limitSheetOpen, openLimitSheet, closeLimitSheet, say, refresh, openWalletModal, signInWithWallet, changeLimit, connectPasskey, pay, withdraw, confirmSheet, cancelSheet, signOut])
 
   return <SessionStateContext.Provider value={value}>{children}</SessionStateContext.Provider>
 }

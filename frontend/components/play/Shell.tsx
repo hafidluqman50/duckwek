@@ -4,8 +4,9 @@ import { useState } from 'react'
 import { useWide } from '@/lib/useWide'
 import { useSession } from '@/contexts/SessionContext'
 import { sound } from '@/lib/sound'
-import { shortenAddress, explorerTransactionUrl, formatUsdc } from '@/lib/config'
+import { shortenAddress, explorerTransactionUrl, formatUsdc, isValidSessionTerms, DEFAULT_SESSION_TERMS, type SessionTerms } from '@/lib/config'
 import { Button } from '@/components/ui/kit'
+import { LimitPicker } from '@/components/play/Onboarding'
 
 export function SoundButton({ dark }: { dark?: boolean }) {
   const [, forceRender] = useState(0)
@@ -145,8 +146,37 @@ export function SignSheet() {
   )
 }
 
+function LimitSheetContent() {
+  const { me, closeLimitSheet, changeLimit } = useSession()
+  const wide = useWide()
+  const [terms, setTerms] = useState<SessionTerms>(me?.session ? { ...DEFAULT_SESSION_TERMS, limit: BigInt(me.session.limit) } : DEFAULT_SESSION_TERMS)
+
+  return (
+    <div className="anim-fade" style={{ position: 'absolute', inset: 0, zIndex: 88, background: 'rgba(0,0,0,0.55)', display: 'flex', flexDirection: 'column', justifyContent: wide ? 'center' : 'flex-end', alignItems: wide ? 'center' : 'stretch' }} onClick={closeLimitSheet}>
+      <div role="dialog" aria-label="Change spending limit" className="anim-sheet" onClick={(event) => event.stopPropagation()} style={{ background: '#fff', color: '#1E1446', ...(wide ? { border: '4px solid #000', borderRadius: 26, width: 440, maxWidth: '90vw' } : { borderTop: '4px solid #000', borderRadius: '26px 26px 0 0' }), padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, lineHeight: 1.05 }}>Change spending limit</div>
+        {me?.session && <div style={{ fontSize: 13, fontWeight: 800 }}>Used {formatUsdc(me.session.spent)} of {formatUsdc(me.session.limit)} USDC in this session.</div>}
+        <LimitPicker terms={terms} onChange={setTerms} />
+        <div style={{ fontSize: 12, fontWeight: 700 }}>You sign once. The new limit replaces the old one: it is the amount you can spend from now on, and the session time counts from now.</div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <Button tone="deep" height={54} fontSize={16} shadow={false} onClick={closeLimitSheet} style={{ flex: 1, border: '3px solid #000' }}>Cancel</Button>
+          <Button height={54} fontSize={17} disabled={!isValidSessionTerms(terms)} onClick={() => changeLimit(terms)} style={{ flex: 2, border: '3px solid #000' }}>Sign new limit</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function LimitSheet() {
+  const { limitSheetOpen, me } = useSession()
+
+  if (!limitSheetOpen || !me) return null
+
+  return <LimitSheetContent />
+}
+
 export function WalletSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { me, signerKind, signerLabel, withdraw, signOut } = useSession()
+  const { me, signerKind, signerLabel, withdraw, signOut, openLimitSheet } = useSession()
   const wide = useWide()
 
   if (!open || !me) return null
@@ -171,6 +201,16 @@ export function WalletSheet({ open, onClose }: { open: boolean; onClose: () => v
             <div style={{ fontSize: 11, fontWeight: 800 }}>from your parts & tracks</div>
           </div>
         </div>
+        {me.session && (
+          <div style={{ border: '3px solid #000', borderRadius: 14, padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 1, color: '#5B4AB8' }}>SPENDING LIMIT</div>
+              <div style={{ fontSize: 16, fontWeight: 900 }}>{formatUsdc(me.session.spent)} of {formatUsdc(me.session.limit)} USDC used</div>
+              <div style={{ fontSize: 11, fontWeight: 800 }}>Ends {new Date(Number(me.session.deadline) * 1000).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+            </div>
+            <Button height={40} fontSize={13} onClick={() => { onClose(); openLimitSheet() }} style={{ border: '3px solid #000', boxShadow: '0 3px 0 #000', paddingInline: 12 }}>Change limit</Button>
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 8 }}>
           <Button height={44} fontSize={14} disabled={Number(me.earnings) <= 0} onClick={() => { onClose(); withdraw() }} style={{ flex: 1, border: '3px solid #000', boxShadow: '0 4px 0 #000' }}>Withdraw earnings</Button>
         </div>
